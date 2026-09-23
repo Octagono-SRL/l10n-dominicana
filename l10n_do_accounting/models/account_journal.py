@@ -42,8 +42,11 @@ class AccountJournal(models.Model):
             # create fiscal sequences
             return types_list + ecf_types
 
-        if invoice.is_purchase_document() and any(
-            t in types_list for t in ("minor", "informal", "exterior")
+        if (
+            invoice.is_purchase_document()
+            and invoice.partner_id.l10n_do_dgii_tax_payer_type
+            and invoice.partner_id.l10n_do_dgii_tax_payer_type
+            in ("non_payer", "foreigner")
         ):
             # Return ncf/ecf types depending on company ECF issuing status
             return ecf_types if self.company_id.l10n_do_ecf_issuer else types_list
@@ -114,13 +117,10 @@ class AccountJournal(models.Model):
             )
             return self._get_all_ncf_types(res)
         if counterpart_partner.l10n_do_dgii_tax_payer_type:
-            if counterpart_partner == self.company_id.partner_id:
-                ncf_types = ["minor"]
-            else:
-                counterpart_ncf_types = ncf_types_data[
-                    "issued" if self.type == "sale" else "received"
-                ][counterpart_partner.l10n_do_dgii_tax_payer_type]
-                ncf_types = list(set(ncf_types) & set(counterpart_ncf_types))
+            counterpart_ncf_types = ncf_types_data[
+                "issued" if self.type == "sale" else "received"
+            ][counterpart_partner.l10n_do_dgii_tax_payer_type]
+            ncf_types = list(set(ncf_types) & set(counterpart_ncf_types))
         else:
             raise ValidationError(
                 _("Partner (%s) %s is needed to issue a fiscal invoice")
@@ -188,18 +188,15 @@ class AccountJournal(models.Model):
                 )
             )
 
-    @api.model_create_multi
-    def create(self, vals_list):
-        journals = super(AccountJournal, self).create(vals_list)
-
-        for journal in journals:
-            journal._l10n_do_create_document_types()
-
-        return journals
+    @api.model
+    def create(self, values):
+        res = super().create(values)
+        res._l10n_do_create_document_types()
+        return res
 
     def write(self, values):
         to_check = {"type", "l10n_latam_use_documents"}
-        res = super(AccountJournal, self).write(values)
+        res = super().write(values)
         if to_check.intersection(set(values.keys())):
             for rec in self:
                 rec._l10n_do_create_document_types()

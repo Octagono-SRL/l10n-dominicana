@@ -14,76 +14,71 @@
             <xpath expr="//field[@name='tax_lock_date_message']/.." position="after">
                 <div class="alert alert-warning"
                      role="alert" style="margin-bottom:0px;"
-                     invisible="move_type == 'entry' or country_code != 'DO'
-                                or not l10n_do_company_in_contingency
-                                or state != 'draft'">
+                     invisible="(((move_type == 'entry' or country_code != 'DO') or l10n_do_company_in_contingency == False) or state != 'draft')">
                     Notice. This company is in a transient state of contingency for Electronic Invoice issuing. NCF issuing has been enabled.
                 </div>
                 <div class="alert alert-warning"
                      role="alert" style="margin-bottom:0px;"
-                     invisible="move_type == 'entry'
-                                or country_code != 'DO'
-                                or not l10n_do_show_expiration_date_msg
-                                or state != 'draft'">
+                     invisible="(((move_type == 'entry' or country_code != 'DO') or l10n_do_show_expiration_date_msg == False) or state != 'draft')">
                     Notice. Document Number field enabled because a new Fiscal Number Expiration date was set on journal
                 </div>
             </xpath>
-            <xpath expr="//button[@name='button_cancel']" position="after">
-                <button name="button_cancel" type="object" string="Cancel"
-                        invisible="state in ('draft', 'cancel') or country_code != 'DO'"/>
+            <xpath expr="//button[@name='button_cancel']" position="attributes">
+                <attribute name="invisible">id == False or (state != 'draft' and country_code != 'DO') or (state in ('draft', 'cancel') and country_code == 'DO')</attribute>
             </xpath>
             <xpath expr="//button[@name='button_draft']" position="attributes">
                 <attribute name="invisible">restrict_mode_hash_table == True or (state not in ('posted', 'cancel') and country_code != 'DO') or (state != 'cancel' and country_code == 'DO')</attribute>
             </xpath>
             <xpath expr="//h1/span/.." position="after">
-                <h4 invisible="state != 'cancel' or country_code != 'DO'">
+                <h4 invisible="(state != 'cancel' or country_code != 'DO')">
                     Cancellation Reason:
                     <br/>
                     <field name="l10n_do_cancellation_type" readonly="1"/>
                 </h4>
             </xpath>
             <xpath expr="//field[@name='l10n_latam_document_number']" position="attributes">
-                <attribute name="required">l10n_do_enable_first_sequence or l10n_latam_manual_document_number and (l10n_latam_use_documents and country_code == 'DO')</attribute>
-                <attribute name="invisible">(not l10n_latam_use_documents and country_code == 'DO') or (not l10n_do_enable_first_sequence and not l10n_latam_manual_document_number and state == 'draft') or (not l10n_do_enable_first_sequence and l10n_latam_manual_document_number and state == 'draft') and (move_type in ('out_invoice', 'out_refund', 'in_refund') and country_code == 'DO')</attribute>
-                <attribute name="readonly">(state != 'draft' and country_code == 'DO') or (posted_before and country_code == 'DO')</attribute>
+                <attribute name="invisible">(((l10n_latam_use_documents == False and country_code == 'DO') or (l10n_do_enable_first_sequence == False and (l10n_latam_manual_document_number == False and state == 'draft'))) or (l10n_do_enable_first_sequence == False and (l10n_latam_manual_document_number == True and (state == 'draft' and (move_type in ('out_invoice', 'out_refund', 'in_refund') and country_code == 'DO')))))</attribute>
+<attribute name="readonly">(state != 'draft' and country_code == 'DO')</attribute>
+<attribute name="required">((l10n_do_enable_first_sequence == True or l10n_latam_manual_document_number == True) and l10n_latam_use_documents == True) and country_code == 'DO'</attribute>
             </xpath>
-            <xpath expr="//form[1]/sheet[1]/group[1]/group[1]/div" position="after">
+            <!-- Was a positional selector (form[1]/sheet[1]/group[1]/group[1]/
+                 field[@name='partner_id']), assuming partner_id was a direct
+                 child of that inner group. Odoo 17.0 wraps it in an
+                 intervening div.o_col instead (verified live against the
+                 real odoo:17.0 image), breaking the direct-child
+                 assumption; reproduced live, this exact gap crashed
+                 production's post-migration DEPLOY. widget=
+                 'res_partner_many2one' uniquely identifies this specific
+                 partner_id field on this form (there is a second, unrelated
+                 one inside the invoice lines tree, column_invisible, no
+                 such widget), so this is both more robust against future
+                 layout changes and no longer coupled to nesting depth. -->
+            <xpath expr="//field[@name='partner_id'][@widget='res_partner_many2one']" position="after">
                 <xpath expr="//field[@name='l10n_latam_document_type_id']" position="move"/>
                 <xpath expr="//field[@name='l10n_latam_document_number']" position="move"/>
-                <field name="l10n_do_origin_ncf"
-                       invisible="(move_type not in ('in_refund', 'out_refund') and not debit_origin_id) or (move_type not in ('in_refund', 'out_refund') and not l10n_latam_use_documents or country_code != 'DO')"
-                       required="(move_type in ('in_refund', 'out_refund') and l10n_latam_use_documents) or debit_origin_id"
-                       readonly="state != 'draft'"/>
-                <field name="l10n_do_ecf_modification_code"
-                       invisible="(move_type not in ('in_refund', 'out_refund') and not debit_origin_id) or (move_type in ('in_refund', 'out_refund') and not is_ecf_invoice) or (debit_origin_id and not is_ecf_invoice) or country_code != 'DO'"
-                       required="is_ecf_invoice and (move_type in ('in_refund', 'out_refund') or debit_origin_id)"
-                       readonly="state != 'draft'"
-                />
+                <field name="l10n_do_origin_ncf" invisible="((move_type not in ('in_refund', 'out_refund') and debit_origin_id == False) or (move_type in ('in_refund', 'out_refund') and (l10n_latam_use_documents == False or country_code != 'DO')))" readonly="state != 'draft'" required="((move_type in ('in_refund', 'out_refund') and l10n_latam_use_documents == True) or debit_origin_id != False)"/>
+                <field name="l10n_do_ecf_modification_code" invisible="((((move_type not in ('in_refund', 'out_refund') and debit_origin_id == False) or (move_type in ('in_refund', 'out_refund') and is_ecf_invoice == False)) or (debit_origin_id != False and is_ecf_invoice == False)) or country_code != 'DO')" required="(is_ecf_invoice == True and (move_type in ('in_refund', 'out_refund') or debit_origin_id != False))"/>
             </xpath>
             <xpath expr="//field[@name='l10n_latam_document_number']" position="after">
-                <field name="l10n_do_income_type"
-                       invisible="not l10n_latam_use_documents or (move_type != 'out_invoice' or country_code != 'DO')"
-                       required="l10n_latam_use_documents and move_type == 'out_invoice'"
-                       readonly="state != 'draft'"/>
-                <field name="l10n_do_expense_type"
-                       invisible="not l10n_latam_use_documents or (move_type != 'in_invoice' or country_code != 'DO')"
-                       required="l10n_latam_use_documents and move_type == 'in_invoice'"
-                       readonly="state != 'draft'"/>
+                <field name="l10n_do_income_type" invisible="(l10n_latam_use_documents == False or (move_type != 'out_invoice' or country_code != 'DO'))" readonly="state != 'draft'" required="(l10n_latam_use_documents == True and move_type == 'out_invoice')"/>
+                <field name="l10n_do_expense_type" invisible="(l10n_latam_use_documents == False or (move_type != 'in_invoice' or country_code != 'DO'))" readonly="state != 'draft'" required="(l10n_latam_use_documents == True and move_type == 'in_invoice')"/>
             </xpath>
             <xpath expr="//div[@name='journal_div']" position="after">
-                <field name="l10n_do_ecf_security_code"
-                    invisible="not partner_id
-                               or country_code != 'DO'
-                               or not l10n_latam_manual_document_number
-                               or not is_ecf_invoice"/>
+                <field name="l10n_do_ecf_security_code" invisible="(((partner_id == False or country_code != 'DO') or l10n_latam_manual_document_number == False) or is_ecf_invoice == False)"/>
             </xpath>
 
             <!-- only computed when l10n_do ecf invoice -->
             <xpath expr="//page[@id='invoice_tab']/field[@name='invoice_line_ids']/tree/field[@name='tax_ids']" position="after">
-                <field name="l10n_do_itbis_amount" column_invisible="1" force_save="1"/>
+                <field name="l10n_do_itbis_amount" invisible="1" force_save="1"/>
             </xpath>
-            <xpath expr="//page[@id='aml_tab']/field[@name='line_ids']/tree/field[@name='account_type']" position="after">
-                <field name="l10n_do_itbis_amount" column_invisible="1" force_save="1"/>
+            <!-- payment_id no longer exists in this tree at all in Odoo
+                 16.0 core (verified live against the odoo:16.0 image's own
+                 account/views/account_move_views.xml): this field is
+                 invisible/force_save, purely a data holder, so any stable
+                 field in the same tree works as the anchor; account_id is
+                 the tree's own first field and always present. -->
+            <xpath expr="//page[@id='aml_tab']/field[@name='line_ids']/tree/field[@name='account_id']" position="after">
+                <field name="l10n_do_itbis_amount" invisible="1" force_save="1"/>
             </xpath>
         </field>
     </record>

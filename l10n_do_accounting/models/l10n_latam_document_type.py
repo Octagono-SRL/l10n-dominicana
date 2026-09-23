@@ -2,6 +2,7 @@ from re import compile
 
 from odoo import models, fields, _
 from odoo.exceptions import ValidationError
+from odoo import api
 
 
 class L10nLatamDocumentType(models.Model):

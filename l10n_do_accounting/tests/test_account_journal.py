@@ -3,7 +3,7 @@ from odoo.tests import tagged
 from odoo.exceptions import RedirectWarning
 
 
-@tagged("-at_install", "post_install")
+@tagged("post_install")
 class AccountJournalTest(common.L10nDOTestsCommon):
     def test_001_raise_redirect(self):
         """

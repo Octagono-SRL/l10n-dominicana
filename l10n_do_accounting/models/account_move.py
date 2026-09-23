@@ -1,15 +1,14 @@
 import re
+from psycopg2 import sql
 from werkzeug import urls
 
 from odoo import models, fields, api, _
 from odoo.osv import expression
 from odoo.exceptions import ValidationError, UserError, AccessError
-from odoo.tools.sql import column_exists, create_column, drop_index, index_exists
 
 
 class AccountMove(models.Model):
     _inherit = "account.move"
-    _rec_names_search = ["l10n_do_fiscal_number"]
 
     _l10n_do_sequence_field = "l10n_do_fiscal_number"
     _l10n_do_sequence_fixed_regex = r"^(?P<prefix1>.*?)(?P<seq>\d{0,8})$"
@@ -83,6 +82,8 @@ class AccountMove(models.Model):
         selection="_get_l10n_do_ecf_modification_code",
         string="e-CF Modification Code",
         copy=False,
+        readonly=True,
+        states={"draft": [("readonly", False)]},
     )
     l10n_do_ecf_security_code = fields.Char(string="e-CF Security Code", copy=False)
     l10n_do_ecf_sign_date = fields.Datetime(string="e-CF Sign Date", copy=False)
@@ -107,7 +108,7 @@ class AccountMove(models.Model):
     )
     l10n_do_fiscal_number = fields.Char(
         "Fiscal Number",
-        index="trigram",
+        index=True,
         tracking=True,
         copy=False,
         help="Stored field equivalent of l10n_latam_document number",
@@ -124,80 +125,52 @@ class AccountMove(models.Model):
         "manually because a new expiration date was set on journal",
     )
 
-    _sql_constraints = [
-        (
-            "unique_l10n_do_fiscal_number_sales",
-            "",
-            "Another document with the same fiscal number already exists.",
-        ),
-        (
-            "unique_l10n_do_fiscal_number_purchase_manual",
-            "",
-            "Another document for the same partner with the same fiscal number already exists.",
-        ),
-        (
-            "unique_l10n_do_fiscal_number_purchase_internal",
-            "",
-            "Another document for the same partner with the same fiscal number already exists.",
-        ),
-    ]
+    def init(self):
+        super(AccountMove, self).init()
 
-    def _auto_init(self):
-        if not index_exists(
-            self.env.cr, "account_move_unique_l10n_do_fiscal_number_sales"
-        ):
-            drop_index(
-                self.env.cr,
-                "account_move_unique_l10n_do_fiscal_number_purchase_manual",
-                self._table,
-            )
-            drop_index(
-                self.env.cr,
-                "account_move_unique_l10n_do_fiscal_number_purchase_internal",
-                self._table,
-            )
-
-            if not column_exists(self.env.cr, "account_move", "l10n_do_fiscal_number"):
-                create_column(
-                    self.env.cr, "account_move", "l10n_do_fiscal_number", "varchar"
-                )
-            if not column_exists(self.env.cr, "account_move", "l10n_latam_manual_document_number"):
-                create_column(
-                    self.env.cr, "account_move", "l10n_latam_manual_document_number", "varchar"
-                )
-
+        if not self._abstract and self._sequence_index:
+            index_name = self._table + "_l10n_do_sequence_index"
             self.env.cr.execute(
-                """
-                CREATE UNIQUE INDEX account_move_unique_l10n_do_fiscal_number_sales
-                ON account_move(l10n_do_fiscal_number, company_id)
-                WHERE (l10n_latam_document_type_id IS NOT NULL
-                AND move_type NOT IN ('in_invoice', 'in_refund'))
-                AND l10n_do_fiscal_number <> '';
-                
-                CREATE UNIQUE INDEX account_move_unique_l10n_do_fiscal_number_purchase_manual
-                ON account_move(l10n_do_fiscal_number, commercial_partner_id, company_id)
-                WHERE (l10n_latam_document_type_id IS NOT NULL AND move_type IN ('in_invoice', 'in_refund')
-                AND l10n_latam_manual_document_number = 't')
-                AND l10n_do_fiscal_number <> '';
-                
-                CREATE UNIQUE INDEX account_move_unique_l10n_do_fiscal_number_purchase_internal
-                ON account_move(l10n_do_fiscal_number, company_id)
-                WHERE (l10n_latam_document_type_id IS NOT NULL AND move_type IN ('in_invoice', 'in_refund', 'in_receipt')
-                AND l10n_latam_manual_document_number = 'f')
-                AND l10n_do_fiscal_number <> '';
-            """
+                "SELECT indexname FROM pg_indexes WHERE indexname = %s", (index_name,)
             )
-        return super()._auto_init()
+            if not self.env.cr.fetchone():
+                self.env.cr.execute(
+                    sql.SQL(
+                        """
+                        CREATE INDEX {index_name} ON {table}
+                        ({sequence_index},
+                        l10n_do_sequence_prefix desc,
+                        l10n_do_sequence_number desc,
+                        {field});
+                        CREATE INDEX {index2_name} ON {table}
+                        ({sequence_index},
+                        id desc,
+                        l10n_do_sequence_prefix);
+                    """
+                    ).format(
+                        sequence_index=sql.Identifier(self._sequence_index),
+                        index_name=sql.Identifier(index_name),
+                        index2_name=sql.Identifier(index_name + "2"),
+                        table=sql.Identifier(self._table),
+                        field=sql.Identifier(self._l10n_do_sequence_field),
+                    )
+                )
 
     @api.model
-    def _name_search(self, name, domain=None, operator='ilike', limit=None, order=None):
+    def _name_search(
+        self, name="", args=None, operator="ilike", limit=100, name_get_uid=None
+    ):
+        args = args or []
+        domain = []
         if name:
-            domain = expression.AND([[
+            domain = [
                 "|",
                 ("name", operator, name),
                 ("l10n_do_fiscal_number", operator, name),
-            ], domain])
-        return super()._name_search(name, domain, operator, limit, order)
+            ]
+        return self._search(
+            expression.AND([domain, args]), limit=limit, access_rights_uid=name_get_uid
+        )
 
     def _l10n_do_is_new_expiration_date(self):
         self.ensure_one()
@@ -234,9 +207,7 @@ class AccountMove(models.Model):
             and inv.l10n_do_ncf_expiration_date
         )
         for invoice in l10n_do_internal_invoices:
-            invoice.l10n_do_show_expiration_date_msg = (
-                invoice._l10n_do_is_new_expiration_date()
-            )
+            invoice.l10n_do_show_expiration_date_msg = invoice._l10n_do_is_new_expiration_date()
 
         (self - l10n_do_internal_invoices).l10n_do_show_expiration_date_msg = False
 
@@ -258,37 +229,156 @@ class AccountMove(models.Model):
             and not inv.l10n_latam_manual_document_number
         )
         for invoice in l10n_do_internal_invoices:
-            invoice.l10n_do_enable_first_sequence = (
-                not bool(
-                    self.search_count(
-                        [
-                            ("company_id", "=", invoice.company_id.id),
-                            ("move_type", "=", invoice.move_type),
-                            (
-                                "l10n_latam_document_type_id",
-                                "=",
-                                invoice.l10n_latam_document_type_id.id,
-                            ),
-                            ("posted_before", "=", True),
-                            ("id", "!=", invoice.id or invoice._origin.id),
-                        ],
-                    )
+            invoice.l10n_do_enable_first_sequence = not bool(
+                self.search_count(
+                    [
+                        ("company_id", "=", invoice.company_id.id),
+                        ("move_type", "=", invoice.move_type),
+                        (
+                            "l10n_latam_document_type_id",
+                            "=",
+                            invoice.l10n_latam_document_type_id.id,
+                        ),
+                        ("posted_before", "=", True),
+                        ("id", "!=", invoice.id or invoice._origin.id),
+                    ],
                 )
-                or invoice.l10n_do_show_expiration_date_msg
-            )
+            ) or invoice.l10n_do_show_expiration_date_msg
 
         (self - l10n_do_internal_invoices).l10n_do_enable_first_sequence = False
 
+    def _l10n_do_tax_group(self, xmlid, name):
+        """Resolve a top-level l10n_do tax group (ITBIS/ISR) robustly.
+
+        Every real tax record in this database's chart of accounts keys
+        off these two GENERIC groups, never the per-rate ones Odoo 17.0's
+        l10n_do also ships (tax_group_itbis_18 and friends) -- confirmed
+        live against this project's own actual account.tax rows,
+        including dgii_bebidas_alcoholicas's own "18% ITBIS Ventas
+        Alcohol". But the xmlid this method used to rely on
+        (l10n_do.tax_group_itbis / l10n_do.tax_group_isr) isn't always
+        present post-OpenUpgrade-migration: the underlying account.tax.group
+        row survives the 16.0->17.0 hop (it's real data, referenced by
+        real historic invoices), but its ir.model.data xmlid mapping does
+        not -- reproduced live, right here. Falling back to a name search
+        keeps this working regardless of that xmlid's migration state.
+        """
+        group = self.env.ref(xmlid, raise_if_not_found=False)
+        if not group:
+            group = self.env["account.tax.group"].search([("name", "=", name)], limit=1)
+        return group
+
     def _get_l10n_do_amounts(self):
         """
-        Method used to prepare dominican fiscal invoices amounts data. Widely used
+        Method used to to prepare dominican fiscal invoices amounts data. Widely used
         on reports and electronic invoicing.
         """
         self.ensure_one()
 
-        return self.line_ids.filtered(
-            lambda line: line.currency_id == self.currency_id
-        )._get_l10n_do_line_amounts()
+        itbis_group = self._l10n_do_tax_group("l10n_do.tax_group_itbis", "ITBIS")
+        isr_group = self._l10n_do_tax_group("l10n_do.tax_group_isr", "ISR")
+
+        tax_lines = self.line_ids.filtered(
+            lambda x: x.tax_group_id.id in [itbis_group.id, isr_group.id]
+        )
+        itbis_tax_lines = tax_lines.filtered(
+            lambda line: line.tax_group_id == itbis_group
+        )
+        isr_tax_lines = tax_lines.filtered(
+            lambda line: line.tax_group_id == isr_group
+        )
+        taxed_lines = self.invoice_line_ids.filtered(
+            lambda x: x.tax_ids and any(tax for tax in x.tax_ids if tax.amount)
+        )
+        exempt_lines = self.invoice_line_ids.filtered(
+            lambda x: not x.tax_ids or any(tax for tax in x.tax_ids if not tax.amount)
+        )
+        itbis_taxed_lines = taxed_lines.filtered(
+            lambda line: itbis_group in line.tax_ids.mapped("tax_group_id")
+        )
+        isr_taxed_lines = taxed_lines.filtered(
+            lambda line: isr_group in line.tax_ids.mapped("tax_group_id")
+        )
+
+        itbis_tax_amount_map = {
+            "18": (18, 1.8),
+            "16": (16, 1.6),
+        }
+
+        result = {
+            "base_amount": sum(taxed_lines.mapped("price_subtotal")),
+            "exempt_amount": sum(exempt_lines.mapped("price_subtotal")),
+            "itbis_18_tax_amount": sum(
+                self.currency_id.round(line.price_subtotal)
+                for line in itbis_tax_lines.filtered(
+                    lambda tl: tl.tax_line_id.amount in itbis_tax_amount_map["18"]
+                )
+            ),
+            "itbis_18_base_amount": sum(
+                itbis_taxed_lines.filtered(
+                    lambda line: any(
+                        tax
+                        for tax in line.tax_ids
+                        if tax.amount in itbis_tax_amount_map["18"]
+                    )
+                ).mapped("price_subtotal")
+            ),
+            "itbis_16_tax_amount": sum(
+                self.currency_id.round(line.price_subtotal)
+                for line in itbis_tax_lines.filtered(
+                    lambda tl: tl.tax_line_id.amount in itbis_tax_amount_map["16"]
+                )
+            ),
+            "itbis_16_base_amount": sum(
+                itbis_taxed_lines.filtered(
+                    lambda line: any(
+                        tax
+                        for tax in line.tax_ids
+                        if tax.amount in itbis_tax_amount_map["16"]
+                    )
+                ).mapped("price_subtotal")
+            ),
+            "itbis_0_tax_amount": 0,  # not supported
+            "itbis_0_base_amount": 0,  # not supported
+            "itbis_withholding_amount": sum(
+                self.currency_id.round(line.price_subtotal)
+                for line in itbis_tax_lines.filtered(
+                    lambda tl: tl.tax_line_id.amount < 0
+                )
+            ),
+            "itbis_withholding_base_amount": sum(
+                itbis_taxed_lines.filtered(
+                    lambda line: any(tax for tax in line.tax_ids if tax.amount < 0)
+                ).mapped("price_subtotal")
+            ),
+            "isr_withholding_amount": sum(
+                self.currency_id.round(line.price_subtotal)
+                for line in isr_tax_lines.filtered(lambda tl: tl.tax_line_id.amount < 0)
+            ),
+            "isr_withholding_base_amount": sum(
+                isr_taxed_lines.filtered(
+                    lambda line: any(tax for tax in line.tax_ids if tax.amount < 0)
+                ).mapped("price_subtotal")
+            ),
+        }
+
+        result["l10n_do_invoice_total"] = (
+            self.amount_untaxed
+            + result["itbis_18_tax_amount"]
+            + result["itbis_16_tax_amount"]
+            + result["itbis_0_tax_amount"]
+        )
+
+        if self.currency_id != self.company_id.currency_id:
+            rate = (self.currency_id + self.company_id.currency_id)._get_rates(
+                self.company_id, self.date
+            ).get(self.currency_id.id) or 1
+            currency_vals = {}
+            for k, v in result.items():
+                currency_vals[k + "_currency"] = v / rate
+            result.update(currency_vals)
+
+        return result
 
     @api.depends(
         "company_id",
@@ -298,7 +388,7 @@ class AccountMove(models.Model):
         for invoice in self.filtered(lambda inv: inv.state == "draft"):
             invoice.is_ecf_invoice = (
                 invoice.company_id.country_id
-                and invoice.country_code == "DO"
+                and invoice.company_id.country_id.code == "DO"
                 and invoice.l10n_latam_document_type_id
                 and invoice.l10n_latam_document_type_id.l10n_do_ncf_type
                 and invoice.l10n_latam_document_type_id.l10n_do_ncf_type[:2] == "e-"
@@ -387,6 +477,40 @@ class AccountMove(models.Model):
 
         (self - l10n_do_ecf_invoice).l10n_do_electronic_stamp = False
 
+    @api.constrains("name", "journal_id", "state", "l10n_do_fiscal_number")
+    def _check_unique_sequence_number(self):
+        l10n_do_invoices = self.filtered(
+            lambda inv: inv.l10n_latam_use_documents
+            and inv.country_code == "DO"
+            and inv.is_sale_document()
+            and inv.state == "posted"
+        )
+        if l10n_do_invoices:
+            self.flush(
+                ["name", "journal_id", "move_type", "state", "l10n_do_fiscal_number"]
+            )
+            self._cr.execute(
+                """
+                SELECT move2.id, move2.l10n_do_fiscal_number
+                FROM account_move move
+                INNER JOIN account_move move2 ON
+                    move2.l10n_do_fiscal_number = move.l10n_do_fiscal_number
+                    AND move2.journal_id = move.journal_id
+                    AND move2.move_type = move.move_type
+                    AND move2.id != move.id
+                WHERE move.id IN %s AND move2.state = 'posted'
+            """,
+                [tuple(l10n_do_invoices.ids)],
+            )
+            res = self._cr.fetchone()
+            if res:
+                raise ValidationError(
+                    _("There is already a sale invoice with fiscal number %s")
+                    % self.l10n_do_fiscal_number
+                )
+
+        super(AccountMove, (self - l10n_do_invoices))._check_unique_sequence_number()
+
     @api.constrains(
         "l10n_do_fiscal_number", "partner_id", "company_id", "posted_before"
     )
@@ -440,13 +564,6 @@ class AccountMove(models.Model):
             "l10n_do_accounting.group_l10n_do_fiscal_invoice_cancel"
         ):
             raise AccessError(_("You are not allowed to cancel Fiscal Invoices"))
-
-        if fiscal_invoice and not fiscal_invoice.posted_before:
-            raise ValidationError(
-                _(
-                    "You cannot cancel a fiscal document that has not been posted before."
-                )
-            )
 
         if not_ecf_fiscal_invoice and not self.env.context.get(
             "skip_cancel_wizard", False
@@ -586,7 +703,7 @@ class AccountMove(models.Model):
             return res
 
         if self.country_code == "DO":
-            res["l10n_do_origin_ncf"] = self.l10n_do_fiscal_number or self.ref
+            res["l10n_do_origin_ncf"] = self.ref
             res["l10n_do_ecf_modification_code"] = l10n_do_ecf_modification_code
 
         if refund_type in ("percentage", "fixed_amount"):
@@ -647,15 +764,61 @@ class AccountMove(models.Model):
         if self.move_type == "out_invoice":
             return (
                 self.company_id.account_sale_tax_id
-                or self.env.ref("account.%s_tax_18_sale" % self.company_id.id)
+                or self.env.ref("l10n_do.%s_tax_18_sale" % self.company_id.id)
                 if (debit_date - self.invoice_date).days <= 30
                 and self.partner_id.l10n_do_dgii_tax_payer_type != "special"
-                else self.env.ref("account.%s_tax_0_sale" % self.company_id.id) or False
+                else self.env.ref("l10n_do.%s_tax_0_sale" % self.company_id.id) or False
             )
         else:
             return self.company_id.account_purchase_tax_id or self.env.ref(
-                "account.%s_tax_0_purch" % self.company_id.id
+                "l10n_do.%s_tax_0_purch" % self.company_id.id
             )
+
+    def _move_autocomplete_invoice_lines_create(self, vals_list):
+        ctx = self.env.context
+        refund_type = ctx.get("refund_type")
+        refund_debit_type = ctx.get("l10n_do_debit_type", refund_type)
+        if refund_debit_type and refund_debit_type in ("percentage", "fixed_amount"):
+            for vals in vals_list:
+                del vals["line_ids"]
+                origin_invoice_id = self.browse(self.env.context.get("active_ids"))
+                taxes = (
+                    [
+                        (
+                            6,
+                            0,
+                            [
+                                origin_invoice_id._get_debit_line_tax(
+                                    vals["invoice_date"]
+                                ).id
+                            ],
+                        )
+                    ]
+                    if ctx.get("l10n_do_debit_type", False)
+                    else [(5, 0)]
+                )
+                price_unit = (
+                    ctx.get("amount")
+                    if refund_debit_type == "fixed_amount"
+                    else origin_invoice_id.amount_untaxed
+                    * (ctx.get("percentage") / 100)
+                )
+                vals["invoice_line_ids"] = [
+                    (
+                        0,
+                        0,
+                        {
+                            "name": ctx.get("reason") or _("Refund"),
+                            "price_unit": price_unit,
+                            "quantity": 1,
+                            "tax_ids": taxes,
+                        },
+                    )
+                ]
+
+        return super(AccountMove, self)._move_autocomplete_invoice_lines_create(
+            vals_list
+        )
 
     def _post(self, soft=True):
         res = super()._post(soft)
@@ -704,7 +867,8 @@ class AccountMove(models.Model):
     def _get_starting_sequence(self):
         if (
             self.journal_id.l10n_latam_use_documents
-            and self.country_code == "DO"
+            and self.company_id.country_id.code == "DO"
+            and self.l10n_latam_document_type_id
         ):
             return self._l10n_do_get_formatted_sequence()
 
@@ -792,7 +956,7 @@ class AccountMove(models.Model):
             field=self._l10n_do_sequence_field,
         )
 
-        self.flush_model(
+        self.flush(
             [
                 self._l10n_do_sequence_field,
                 "l10n_do_sequence_number",
