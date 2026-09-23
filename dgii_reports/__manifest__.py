@@ -15,6 +15,9 @@
     "version": "12.0.1.2.1",
     # any module necessary for this one to work correctly
     "depends": ["base", "ncf_manager"],
+    "external_dependencies": {
+        "python": ["pycountry"],
+    },
     # always loaded
     "data": [
         "data/ir_config_parameter_data.xml",
