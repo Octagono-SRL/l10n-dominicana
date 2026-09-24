@@ -4,7 +4,7 @@ from odoo.tests import tagged
 from odoo.exceptions import ValidationError
 
 
-@tagged("post_install")
+@tagged("post_install", "-at_install")
 class AccountMoveTest(common.L10nDOTestsCommon):
     def test_001_invoice_ncf_types(self):
         """
@@ -43,6 +43,7 @@ class AccountMoveTest(common.L10nDOTestsCommon):
             )
             .create(
                 {
+                    "journal_id": ncf_sale_credito_fiscal_invoice.journal_id.id,
                     "refund_type": "percentage",
                     "percentage": "5",
                 }
@@ -185,6 +186,7 @@ class AccountMoveTest(common.L10nDOTestsCommon):
             )
             .create(
                 {
+                    "journal_id": ncf_purchase_credito_fiscal_invoice.journal_id.id,
                     "refund_type": "percentage",
                     "percentage": "5",
                     "l10n_latam_document_number": "B0400000001",
@@ -290,6 +292,7 @@ class AccountMoveTest(common.L10nDOTestsCommon):
             )
             .create(
                 {
+                    "journal_id": ecf_sale_credito_fiscal_invoice.journal_id.id,
                     "refund_type": "percentage",
                     "percentage": "5",
                 }
@@ -432,6 +435,7 @@ class AccountMoveTest(common.L10nDOTestsCommon):
             )
             .create(
                 {
+                    "journal_id": ecf_purchase_credito_fiscal_invoice.journal_id.id,
                     "refund_type": "percentage",
                     "percentage": "5",
                     "l10n_latam_document_number": "B0400000001",
@@ -622,12 +626,11 @@ class AccountMoveTest(common.L10nDOTestsCommon):
         )
         invoice_id._post()
 
-        invoice_2 = self._create_l10n_do_invoice(
-            data={
-                "document_number": "B0100000002",
-            }
-        )
+        # only the first invoice of a document type takes a manual fiscal
+        # number, the next ones are numbered automatically
+        invoice_2 = self._create_l10n_do_invoice()
         invoice_2._post()
+        self.assertEqual(invoice_2.l10n_do_fiscal_number, "B0100000002")
         with self.assertRaises(ValidationError):
             invoice_2.write({"l10n_do_fiscal_number": "B0100000001"})
 
@@ -687,8 +690,10 @@ class AccountMoveTest(common.L10nDOTestsCommon):
                 "document_number": "B0100000001",
             }
         )
-        self.assertEqual(invoice_1.name, "INV/%s/0001" % invoice_1.date.year)
+        # since 18.0 draft moves are not named until they are posted
+        self.assertFalse(invoice_1.name)
         invoice_1._post()
+        self.assertEqual(invoice_1.name, "INV/%s/0001" % invoice_1.date.year)
         self.assertEqual(invoice_1.l10n_do_fiscal_number, "B0100000001")
 
         invoice_2 = self._create_l10n_do_invoice()

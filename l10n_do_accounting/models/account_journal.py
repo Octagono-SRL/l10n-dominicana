@@ -188,10 +188,11 @@ class AccountJournal(models.Model):
                 )
             )
 
-    @api.model
-    def create(self, values):
-        res = super().create(values)
-        res._l10n_do_create_document_types()
+    @api.model_create_multi
+    def create(self, vals_list):
+        res = super().create(vals_list)
+        for journal in res:
+            journal._l10n_do_create_document_types()
         return res
 
     def write(self, values):
@@ -216,7 +217,7 @@ class AccountJournalDocumentType(models.Model):
     l10n_do_ncf_expiration_date = fields.Date(
         string="Expiration date",
         required=True,
-        default=fields.Date.end_of(
+        default=lambda self: fields.Date.end_of(
             fields.Date.today().replace(month=12, year=fields.Date.today().year + 1),
             "year",
         ),

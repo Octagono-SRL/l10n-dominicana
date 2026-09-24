@@ -56,8 +56,12 @@
             <xpath expr="//field[@name='partner_id'][@widget='res_partner_many2one']" position="after">
                 <xpath expr="//field[@name='l10n_latam_document_type_id']" position="move"/>
                 <xpath expr="//field[@name='l10n_latam_document_number']" position="move"/>
+                <!-- the stored twin of l10n_latam_document_number must travel with the
+                     form, otherwise onchange rebuilds the record without it and the
+                     derived document number gets recomputed to empty -->
+                <field name="l10n_do_fiscal_number" invisible="1"/>
                 <field name="l10n_do_origin_ncf" invisible="((move_type not in ('in_refund', 'out_refund') and debit_origin_id == False) or (move_type in ('in_refund', 'out_refund') and (l10n_latam_use_documents == False or country_code != 'DO')))" readonly="state != 'draft'" required="((move_type in ('in_refund', 'out_refund') and l10n_latam_use_documents == True) or debit_origin_id != False)"/>
-                <field name="l10n_do_ecf_modification_code" invisible="((((move_type not in ('in_refund', 'out_refund') and debit_origin_id == False) or (move_type in ('in_refund', 'out_refund') and is_ecf_invoice == False)) or (debit_origin_id != False and is_ecf_invoice == False)) or country_code != 'DO')" required="(is_ecf_invoice == True and (move_type in ('in_refund', 'out_refund') or debit_origin_id != False))"/>
+                <field name="l10n_do_ecf_modification_code" readonly="state != 'draft'" invisible="((((move_type not in ('in_refund', 'out_refund') and debit_origin_id == False) or (move_type in ('in_refund', 'out_refund') and is_ecf_invoice == False)) or (debit_origin_id != False and is_ecf_invoice == False)) or country_code != 'DO')" required="(is_ecf_invoice == True and (move_type in ('in_refund', 'out_refund') or debit_origin_id != False))"/>
             </xpath>
             <xpath expr="//field[@name='l10n_latam_document_number']" position="after">
                 <field name="l10n_do_income_type" invisible="(l10n_latam_use_documents == False or (move_type != 'out_invoice' or country_code != 'DO'))" readonly="state != 'draft'" required="(l10n_latam_use_documents == True and move_type == 'out_invoice')"/>
@@ -68,7 +72,7 @@
             </xpath>
 
             <!-- only computed when l10n_do ecf invoice -->
-            <xpath expr="//page[@id='invoice_tab']/field[@name='invoice_line_ids']/tree/field[@name='tax_ids']" position="after">
+            <xpath expr="//page[@id='invoice_tab']/field[@name='invoice_line_ids']/list/field[@name='tax_ids']" position="after">
                 <field name="l10n_do_itbis_amount" invisible="1" force_save="1"/>
             </xpath>
             <!-- payment_id no longer exists in this tree at all in Odoo
@@ -77,7 +81,7 @@
                  invisible/force_save, purely a data holder, so any stable
                  field in the same tree works as the anchor; account_id is
                  the tree's own first field and always present. -->
-            <xpath expr="//page[@id='aml_tab']/field[@name='line_ids']/tree/field[@name='account_id']" position="after">
+            <xpath expr="//page[@id='aml_tab']/field[@name='line_ids']/list/field[@name='account_id']" position="after">
                 <field name="l10n_do_itbis_amount" invisible="1" force_save="1"/>
             </xpath>
         </field>
@@ -95,10 +99,10 @@
     <record id="action_invoice_out_debit_note" model="ir.actions.act_window">
         <field name="name">Debit Notes</field>
         <field name="res_model">account.move</field>
-        <field name="view_mode">tree,kanban,form</field>
+        <field name="view_mode">list,kanban,form</field>
         <field name="view_ids"
                eval="[(5, 0, 0),
-                          (0, 0, {'view_mode': 'tree', 'view_id': ref('account.view_invoice_tree')}),
+                          (0, 0, {'view_mode': 'list', 'view_id': ref('account.view_invoice_tree')}),
                           (0, 0, {'view_mode': 'form', 'view_id': ref('account.view_move_form')})]"/>
         <field name="domain">[('move_type','=','out_invoice'), ('debit_origin_id', '!=', False)]</field>
         <field name="context">{
@@ -128,7 +132,7 @@
     <record id="action_vendor_in_debit_note" model="ir.actions.act_window">
         <field name="name">Vendor Debit Notes</field>
         <field name="res_model">account.move</field>
-        <field name="view_mode">tree,kanban,form</field>
+        <field name="view_mode">list,kanban,form</field>
         <field eval="False" name="view_id"/>
         <field name="domain">[('move_type','=','in_invoice'), ('debit_origin_id', '!=', False)]</field>
         <field name="context">{

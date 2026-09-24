@@ -1,12 +1,25 @@
-from odoo.tests.common import Form
+from odoo.tests import Form
 from odoo.addons.account.tests.common import AccountTestInvoicingCommon
 
 
 class L10nDOTestsCommon(AccountTestInvoicingCommon):
     @classmethod
-    def setUpClass(cls, chart_template_ref="l10n_do.do_chart_template"):
-        super(L10nDOTestsCommon, cls).setUpClass(chart_template_ref=chart_template_ref)
+    def _create_company(cls, **create_values):
+        # the DO chart of accounts refuses to load on a company without a VAT
+        create_values.setdefault("vat", "131793916")
+        return super()._create_company(**create_values)
 
+    @classmethod
+    @AccountTestInvoicingCommon.setup_country("do")
+    def setUpClass(cls):
+        super().setUpClass()
+
+        cls.env.user.groups_id |= (
+            cls.env.ref("l10n_do_accounting.group_l10n_do_fiscal_credit_note")
+            | cls.env.ref("l10n_do_accounting.group_l10n_do_fiscal_invoice_cancel")
+            | cls.env.ref("l10n_do_accounting.group_l10n_do_edit_fiscal_partner")
+            | cls.env.ref("l10n_do_accounting.group_l10n_do_debit_note")
+        )
         cls.company_data["company"].write(
             {
                 "currency_id": cls.env.ref("base.DOP").id,

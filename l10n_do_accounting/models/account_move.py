@@ -82,8 +82,6 @@ class AccountMove(models.Model):
         selection="_get_l10n_do_ecf_modification_code",
         string="e-CF Modification Code",
         copy=False,
-        readonly=True,
-        states={"draft": [("readonly", False)]},
     )
     l10n_do_ecf_security_code = fields.Char(string="e-CF Security Code", copy=False)
     l10n_do_ecf_sign_date = fields.Datetime(string="e-CF Sign Date", copy=False)
@@ -157,19 +155,19 @@ class AccountMove(models.Model):
                 )
 
     @api.model
-    def _name_search(
-        self, name="", args=None, operator="ilike", limit=100, name_get_uid=None
-    ):
-        args = args or []
-        domain = []
+    def _name_search(self, name, domain=None, operator="ilike", limit=None, order=None):
+        domain = domain or []
         if name:
-            domain = [
+            name_domain = [
                 "|",
                 ("name", operator, name),
                 ("l10n_do_fiscal_number", operator, name),
             ]
-        return self._search(
-            expression.AND([domain, args]), limit=limit, access_rights_uid=name_get_uid
+            return self._search(
+                expression.AND([name_domain, domain]), limit=limit, order=order
+            )
+        return super()._name_search(
+            name, domain=domain, operator=operator, limit=limit, order=order
         )
 
     def _l10n_do_is_new_expiration_date(self):
@@ -247,26 +245,20 @@ class AccountMove(models.Model):
 
         (self - l10n_do_internal_invoices).l10n_do_enable_first_sequence = False
 
-    def _l10n_do_tax_group(self, xmlid, name):
-        """Resolve a top-level l10n_do tax group (ITBIS/ISR) robustly.
+    def _l10n_do_tax_group(self, name):
+        """Generic ITBIS/ISR tax group of this move's company.
 
-        Every real tax record in this database's chart of accounts keys
-        off these two GENERIC groups, never the per-rate ones Odoo 17.0's
-        l10n_do also ships (tax_group_itbis_18 and friends) -- confirmed
-        live against this project's own actual account.tax rows,
-        including dgii_bebidas_alcoholicas's own "18% ITBIS Ventas
-        Alcohol". But the xmlid this method used to rely on
-        (l10n_do.tax_group_itbis / l10n_do.tax_group_isr) isn't always
-        present post-OpenUpgrade-migration: the underlying account.tax.group
-        row survives the 16.0->17.0 hop (it's real data, referenced by
-        real historic invoices), but its ir.model.data xmlid mapping does
-        not -- reproduced live, right here. Falling back to a name search
-        keeps this working regardless of that xmlid's migration state.
+        Since 18.0 tax groups belong to a company (one set per chart of
+        accounts) and their xmlids are namespaced per company, so they are
+        resolved by name within the move's own company.
         """
-        group = self.env.ref(xmlid, raise_if_not_found=False)
-        if not group:
-            group = self.env["account.tax.group"].search([("name", "=", name)], limit=1)
-        return group
+        self.ensure_one()
+        return self.env["account.tax.group"].search(
+            [("name", "=", name), ("company_id", "=", self.company_id.id)], limit=1
+        )
+
+    def _get_tax_line_ids(self):
+        return self.line_ids.filtered("tax_line_id")
 
     def _get_l10n_do_amounts(self):
         """
@@ -275,8 +267,8 @@ class AccountMove(models.Model):
         """
         self.ensure_one()
 
-        itbis_group = self._l10n_do_tax_group("l10n_do.tax_group_itbis", "ITBIS")
-        isr_group = self._l10n_do_tax_group("l10n_do.tax_group_isr", "ISR")
+        itbis_group = self._l10n_do_tax_group("ITBIS")
+        isr_group = self._l10n_do_tax_group("ISR")
 
         tax_lines = self.line_ids.filtered(
             lambda x: x.tax_group_id.id in [itbis_group.id, isr_group.id]
@@ -309,7 +301,7 @@ class AccountMove(models.Model):
             "base_amount": sum(taxed_lines.mapped("price_subtotal")),
             "exempt_amount": sum(exempt_lines.mapped("price_subtotal")),
             "itbis_18_tax_amount": sum(
-                self.currency_id.round(line.price_subtotal)
+                self.currency_id.round(abs(line.amount_currency))
                 for line in itbis_tax_lines.filtered(
                     lambda tl: tl.tax_line_id.amount in itbis_tax_amount_map["18"]
                 )
@@ -324,7 +316,7 @@ class AccountMove(models.Model):
                 ).mapped("price_subtotal")
             ),
             "itbis_16_tax_amount": sum(
-                self.currency_id.round(line.price_subtotal)
+                self.currency_id.round(abs(line.amount_currency))
                 for line in itbis_tax_lines.filtered(
                     lambda tl: tl.tax_line_id.amount in itbis_tax_amount_map["16"]
                 )
@@ -341,7 +333,7 @@ class AccountMove(models.Model):
             "itbis_0_tax_amount": 0,  # not supported
             "itbis_0_base_amount": 0,  # not supported
             "itbis_withholding_amount": sum(
-                self.currency_id.round(line.price_subtotal)
+                self.currency_id.round(abs(line.amount_currency))
                 for line in itbis_tax_lines.filtered(
                     lambda tl: tl.tax_line_id.amount < 0
                 )
@@ -352,7 +344,7 @@ class AccountMove(models.Model):
                 ).mapped("price_subtotal")
             ),
             "isr_withholding_amount": sum(
-                self.currency_id.round(line.price_subtotal)
+                self.currency_id.round(abs(line.amount_currency))
                 for line in isr_tax_lines.filtered(lambda tl: tl.tax_line_id.amount < 0)
             ),
             "isr_withholding_base_amount": sum(
@@ -486,7 +478,7 @@ class AccountMove(models.Model):
             and inv.state == "posted"
         )
         if l10n_do_invoices:
-            self.flush(
+            self.flush_model(
                 ["name", "journal_id", "move_type", "state", "l10n_do_fiscal_number"]
             )
             self._cr.execute(
@@ -508,8 +500,6 @@ class AccountMove(models.Model):
                     _("There is already a sale invoice with fiscal number %s")
                     % self.l10n_do_fiscal_number
                 )
-
-        super(AccountMove, (self - l10n_do_invoices))._check_unique_sequence_number()
 
     @api.constrains(
         "l10n_do_fiscal_number", "partner_id", "company_id", "posted_before"
@@ -956,7 +946,7 @@ class AccountMove(models.Model):
             field=self._l10n_do_sequence_field,
         )
 
-        self.flush(
+        self.flush_model(
             [
                 self._l10n_do_sequence_field,
                 "l10n_do_sequence_number",
