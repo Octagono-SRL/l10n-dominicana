@@ -8,7 +8,7 @@ class ResCompany(models.Model):
 
     l10n_do_default_client = fields.Selection(
         selection=[("non_payer", "Final Consumer"), ("taxpayer", "Fiscal Consumer")],
-        default=lambda self: self._context.get("l10n_do_default_client", "non_payer"),
+        default=lambda self: self.env.context.get("l10n_do_default_client", "non_payer"),
         string="Default Customer",
     )
     l10n_do_ecf_issuer = fields.Boolean(

@@ -14,7 +14,7 @@ class L10nDOTestsCommon(AccountTestInvoicingCommon):
     def setUpClass(cls):
         super().setUpClass()
 
-        cls.env.user.groups_id |= (
+        cls.env.user.group_ids |= (
             cls.env.ref("l10n_do_accounting.group_l10n_do_fiscal_credit_note")
             | cls.env.ref("l10n_do_accounting.group_l10n_do_fiscal_invoice_cancel")
             | cls.env.ref("l10n_do_accounting.group_l10n_do_edit_fiscal_partner")

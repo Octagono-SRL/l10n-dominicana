@@ -1,4 +1,5 @@
 from odoo import api, fields, models
+from odoo.tools import html2plaintext
 
 
 class AccountMoveLine(models.Model):
@@ -34,3 +35,11 @@ class AccountMoveLine(models.Model):
                 )
                 amount = sum(t["amount"] for t in taxes_data["taxes"])
             line.l10n_do_itbis_amount = amount
+
+    def _l10n_do_tax_labels(self):
+        """Printable tax labels of the line (the tax description is HTML since 19.0)"""
+        self.ensure_one()
+        return ", ".join(
+            html2plaintext(tax.description).strip() if tax.description else tax.name
+            for tax in self.tax_ids
+        )
