@@ -93,7 +93,7 @@
                         <t t-elif="vat_len == 11">Cédula:</t>
                         <t t-else="">ID Cliente:</t>
                     </strong>
-                    <span class="m-0" t-esc="o.partner_id.vat or ''"/>
+                    <span class="m-0" t-out="o.partner_id.vat or ''"/>
                     <br/>
                     <strong>
                         <t t-if="vat_len == 9">Razón Social:</t>
@@ -161,7 +161,7 @@
             </t>
         </xpath>
 
-        <!-- The old //t[@t-esc='amount_by_group[4]']/.. hide (v14's duplicate
+        <!-- The old //t[@t-out='amount_by_group[4]']/.. hide (v14's duplicate
              print-vs-screen amount_by_group rendering) is obsolete in 15.0:
              the whole amount_by_group loop is now unified in
              account.tax_groups_totals, hidden wholesale for l10n_do invoices
@@ -176,12 +176,12 @@
                         </div>
                         <t t-if="o.l10n_do_ecf_security_code">
                             <strong>Código de Seguridad:</strong>
-                            <span t-esc="o.l10n_do_ecf_security_code"/>
+                            <span t-out="o.l10n_do_ecf_security_code"/>
                         </t>
                         <br/>
                         <t t-if="o.l10n_do_ecf_sign_date">
                             <strong>Fecha Firma Digital:</strong>
-                            <span t-esc="context_timestamp(o.l10n_do_ecf_sign_date).strftime('%d-%m-%Y')"/>
+                            <span t-out="context_timestamp(o.l10n_do_ecf_sign_date).strftime('%d-%m-%Y')"/>
                         </t>
                     </t>
                 </div>
@@ -216,12 +216,12 @@
         <xpath expr="//td[@t-if='display_discount']" position="after">
             <td t-if="is_l10n_do_invoice and display_discount and ecf_representation" t-attf-class="text-end {{ 'd-none d-md-table-cell' if report_type == 'html' else '' }}">
                 <t t-set="discount_amount" t-value="line.price_unit * line.quantity * line.discount / 100"/>
-                <span class="text-nowrap" t-esc="discount_amount"
+                <span class="text-nowrap" t-out="discount_amount"
                       t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
             </td>
         </xpath>
         <xpath expr="//span[@id='line_tax_ids']" position="attributes">
-            <attribute name="t-esc">', '.join(map(lambda x: (x.description or x.name), line.tax_ids)) if not ecf_representation else '%s %s' % (o.currency_id.symbol, '{0:,.2f}'.format(line.l10n_do_itbis_amount))</attribute>
+            <attribute name="t-out">line._l10n_do_tax_labels() if not ecf_representation else '%s %s' % (o.currency_id.symbol, '{0:,.2f}'.format(line.l10n_do_itbis_amount))</attribute>
         </xpath>
 
         <!-- o.amount_total's own <span t-field> in report_invoice_document is
@@ -235,9 +235,9 @@
                 <t t-set="l10n_do_wh_amount" t-value="tax_aml.debit or tax_aml.credit if o.currency_id == o.company_id.currency_id else tax_aml.amount_currency"/>
                 <tr t-if="tax_aml.tax_line_id.amount &lt; 0" style="">
                     <t>
-                        <td><span class="text-nowrap" t-esc="tax_aml.tax_line_id.description"/></td>
+                        <td><span class="text-nowrap" t-out="tax_aml.tax_line_id.description"/></td>
                         <td class="text-end o_price_total">
-                            <span class="text-nowrap" t-esc="l10n_do_wh_amount"
+                            <span class="text-nowrap" t-out="l10n_do_wh_amount"
                                   t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
                         </td>
                     </t>
@@ -262,9 +262,9 @@
                 <t t-set="l10n_do_tax_amount" t-value="abs(tax_aml.debit or tax_aml.credit if o.currency_id == o.company_id.currency_id else tax_aml.amount_currency)"/>
                 <tr t-if="tax_aml.tax_line_id.amount &gt; 0" style="">
                     <t>
-                        <td><span class="text-nowrap" t-esc="tax_aml.tax_line_id.description"/></td>
+                        <td><span class="text-nowrap" t-out="tax_aml.tax_line_id.description"/></td>
                         <td class="text-end o_price_total">
-                            <span class="text-nowrap" t-esc="l10n_do_tax_amount"
+                            <span class="text-nowrap" t-out="l10n_do_tax_amount"
                                   t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
                         </td>
                     </t>
@@ -279,7 +279,7 @@
         </xpath>
         <xpath expr="//tr[hasclass('o_total')]/td[2]/strong" position="after">
             <t t-set="l10n_do_amount_total" t-value="l10n_do_amounts['l10n_do_invoice_total']"/>
-            <span t-if="is_l10n_do_invoice" class="text-nowrap" t-esc="l10n_do_amount_total"
+            <span t-if="is_l10n_do_invoice" class="text-nowrap" t-out="l10n_do_amount_total"
                   t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
         </xpath>
 
@@ -292,7 +292,7 @@
                 <td class="text-end o_price_total">
                     <!-- MontoGravadoTotal consiste en la suma de la base imponible de todas las lineas gravadas con ITBIS -->
                     <span class="text-nowrap" t-options='{"widget": "monetary", "display_currency": o.currency_id}'
-                          t-esc="total_amount_taxed"/>
+                          t-out="total_amount_taxed"/>
                 </td>
             </tr>
             <tr t-if="is_l10n_do_invoice and total_exempt_amount and ecf_representation">
@@ -300,7 +300,7 @@
                 <td class="text-end o_price_total">
                     <!-- MontoExento consiste en la suma de la base imponible de todas las lineas exentas -->
                     <span class="text-nowrap" t-options='{"widget": "monetary", "display_currency": o.currency_id}'
-                          t-esc="total_exempt_amount"/>
+                          t-out="total_exempt_amount"/>
                 </td>
             </tr>
         </xpath>
