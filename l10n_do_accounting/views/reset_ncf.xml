@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Acción de servidor simple para limpiar NCF -->
+        <record id="action_clear_ncf_simple" model="ir.actions.server">
+            <field name="name">Limpiar NCF</field>
+            <field name="model_id" ref="account.model_account_move"/>
+            <field name="binding_model_id" ref="account.model_account_move"/>
+            <field name="binding_view_types">form</field>
+            <field name="state">code</field>
+            <field name="code">
+# Limpiar NCF usando el campo correcto
+if record and record.state == 'draft':
+    env.cr.execute("""
+        UPDATE account_move
+        SET ref = NULL,
+            l10n_do_fiscal_number = NULL
+        WHERE id = %s
+    """, (record.id,))
+    env.cr.commit()
+    record.invalidate_cache(['ref', 'l10n_do_fiscal_number'])
+            </field>
+        </record>
+    </data>
+</odoo>
