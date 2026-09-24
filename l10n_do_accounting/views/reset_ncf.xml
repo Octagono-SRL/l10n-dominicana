@@ -18,7 +18,7 @@ if record and record.state == 'draft':
         WHERE id = %s
     """, (record.id,))
     env.cr.commit()
-    record.invalidate_cache(['ref', 'l10n_do_fiscal_number'])
+    record.invalidate_recordset(['ref', 'l10n_do_fiscal_number'])
             </field>
         </record>
     </data>
