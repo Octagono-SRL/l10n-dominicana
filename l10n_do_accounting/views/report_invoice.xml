@@ -231,7 +231,8 @@
              + l10n_do total replacement. -->
 
         <xpath expr="//t[@t-set='payments_vals']" position="before">
-            <t t-if="is_l10n_do_invoice" t-foreach="o._get_tax_line_ids()" t-as="tax_aml">
+            <t t-if="is_l10n_do_invoice">
+            <t t-foreach="o._get_tax_line_ids()" t-as="tax_aml">
                 <t t-set="l10n_do_wh_amount" t-value="tax_aml.debit or tax_aml.credit if o.currency_id == o.company_id.currency_id else tax_aml.amount_currency"/>
                 <tr t-if="tax_aml.tax_line_id.amount &lt; 0" style="">
                     <t>
@@ -242,6 +243,7 @@
                         </td>
                     </t>
                 </tr>
+            </t>
             </t>
         </xpath>
 
@@ -258,7 +260,8 @@
         </xpath>
 
         <xpath expr="//t[@t-as='subtotal']" position="after">
-            <t t-if="is_l10n_do_invoice" t-foreach="o._get_tax_line_ids()" t-as="tax_aml">
+            <t t-if="is_l10n_do_invoice">
+            <t t-foreach="o._get_tax_line_ids()" t-as="tax_aml">
                 <t t-set="l10n_do_tax_amount" t-value="abs(tax_aml.debit or tax_aml.credit if o.currency_id == o.company_id.currency_id else tax_aml.amount_currency)"/>
                 <tr t-if="tax_aml.tax_line_id.amount &gt; 0" style="">
                     <t>
@@ -269,6 +272,7 @@
                         </td>
                     </t>
                 </tr>
+            </t>
             </t>
         </xpath>
 
