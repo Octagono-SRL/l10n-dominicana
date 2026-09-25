@@ -486,7 +486,7 @@ class AccountMove(models.Model):
             and inv.state == "posted"
         )
         if l10n_do_invoices:
-            self.flush(
+            self.flush_model(
                 ["name", "journal_id", "move_type", "state", "l10n_do_fiscal_number"]
             )
             self._cr.execute(
@@ -509,7 +509,11 @@ class AccountMove(models.Model):
                     % self.l10n_do_fiscal_number
                 )
 
-        super(AccountMove, (self - l10n_do_invoices))._check_unique_sequence_number()
+        # Odoo 17 dropped this constraint from the base model (uniqueness is
+        # a SQL index now), so only chain to it when a parent still has it.
+        parent = super(AccountMove, (self - l10n_do_invoices))
+        if hasattr(parent, "_check_unique_sequence_number"):
+            parent._check_unique_sequence_number()
 
     @api.constrains(
         "l10n_do_fiscal_number", "partner_id", "company_id", "posted_before"
@@ -956,7 +960,7 @@ class AccountMove(models.Model):
             field=self._l10n_do_sequence_field,
         )
 
-        self.flush(
+        self.flush_model(
             [
                 self._l10n_do_sequence_field,
                 "l10n_do_sequence_number",
