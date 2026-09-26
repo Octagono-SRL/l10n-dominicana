@@ -268,6 +268,11 @@ class AccountMove(models.Model):
             group = self.env["account.tax.group"].search([("name", "=", name)], limit=1)
         return group
 
+    def _get_tax_line_ids(self):
+        # Used by the invoice report (views/report_invoice.xml). Backported
+        # from 18.0; account.move.line.tax_line_id exists in 17.0 as well.
+        return self.line_ids.filtered("tax_line_id")
+
     def _get_l10n_do_amounts(self):
         """
         Method used to to prepare dominican fiscal invoices amounts data. Widely used
