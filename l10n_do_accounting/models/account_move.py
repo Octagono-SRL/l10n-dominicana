@@ -309,12 +309,13 @@ class AccountMove(models.Model):
             "18": (18, 1.8),
             "16": (16, 1.6),
         }
-
+        sign = -1 if self.move_type in ("out_invoice", "in_refund") else 1
+        
         result = {
             "base_amount": sum(taxed_lines.mapped("price_subtotal")),
             "exempt_amount": sum(exempt_lines.mapped("price_subtotal")),
             "itbis_18_tax_amount": sum(
-                self.currency_id.round(line.price_subtotal)
+                self.currency_id.round(sign * line.amount_currency)
                 for line in itbis_tax_lines.filtered(
                     lambda tl: tl.tax_line_id.amount in itbis_tax_amount_map["18"]
                 )
@@ -329,7 +330,7 @@ class AccountMove(models.Model):
                 ).mapped("price_subtotal")
             ),
             "itbis_16_tax_amount": sum(
-                self.currency_id.round(line.price_subtotal)
+                self.currency_id.round(sign * line.amount_currency)
                 for line in itbis_tax_lines.filtered(
                     lambda tl: tl.tax_line_id.amount in itbis_tax_amount_map["16"]
                 )
@@ -346,7 +347,7 @@ class AccountMove(models.Model):
             "itbis_0_tax_amount": 0,  # not supported
             "itbis_0_base_amount": 0,  # not supported
             "itbis_withholding_amount": sum(
-                self.currency_id.round(line.price_subtotal)
+                self.currency_id.round(abs(line.amount_currency))
                 for line in itbis_tax_lines.filtered(
                     lambda tl: tl.tax_line_id.amount < 0
                 )
@@ -357,7 +358,7 @@ class AccountMove(models.Model):
                 ).mapped("price_subtotal")
             ),
             "isr_withholding_amount": sum(
-                self.currency_id.round(line.price_subtotal)
+                self.currency_id.round(abs(line.amount_currency))
                 for line in isr_tax_lines.filtered(lambda tl: tl.tax_line_id.amount < 0)
             ),
             "isr_withholding_base_amount": sum(
@@ -367,11 +368,11 @@ class AccountMove(models.Model):
             ),
         }
 
-        result["l10n_do_invoice_total"] = (
-            self.amount_untaxed
-            + result["itbis_18_tax_amount"]
-            + result["itbis_16_tax_amount"]
-            + result["itbis_0_tax_amount"]
+        result["l10n_do_invoice_total"] = self.amount_untaxed + sum(
+            self.currency_id.round(sign * line.amount_currency)
+            for line in self.line_ids.filtered(
+                lambda l: l.tax_line_id and l.tax_line_id.amount > 0
+            )
         )
 
         if self.currency_id != self.company_id.currency_id:
