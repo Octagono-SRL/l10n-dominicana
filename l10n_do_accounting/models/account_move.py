@@ -354,11 +354,11 @@ class AccountMove(models.Model):
             ),
         }
 
-        result["l10n_do_invoice_total"] = (
-            self.amount_untaxed
-            + result["itbis_18_tax_amount"]
-            + result["itbis_16_tax_amount"]
-            + result["itbis_0_tax_amount"]
+        result["l10n_do_invoice_total"] = self.amount_untaxed + sum(
+            self.currency_id.round(abs(line.amount_currency))
+            for line in self.line_ids.filtered(
+                lambda l: l.tax_line_id and l.tax_line_id.amount > 0
+            )
         )
 
         if self.currency_id != self.company_id.currency_id:
