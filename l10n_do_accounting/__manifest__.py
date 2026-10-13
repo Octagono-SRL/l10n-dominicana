@@ -12,6 +12,9 @@
     # any module necessary for this one to work correctly
     "depends": ["l10n_latam_invoice_document", "l10n_do"],
     # always loaded
+    "controllers": [
+        "controllers/main.py",
+    ],
     "data": [
         "security/ir.model.access.csv",
         "security/res_groups.xml",
@@ -29,6 +32,7 @@
         "views/report_templates.xml",
         "views/report_invoice.xml",
         "views/reset_ncf.xml",
+        "views/filter_fiscal_number.xml",
     ],
     # only loaded in demonstration mode
     "demo": [

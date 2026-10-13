@@ -1,0 +1,14 @@
+<odoo>
+    <data>
+        <record id="account_view_account_invoice_filter" model="ir.ui.view">
+            <field name="name">account.invoice.filter</field>
+            <field name="model">account.move</field>
+            <field name="inherit_id" ref="account.view_account_invoice_filter"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='line_ids']" position="after">
+                    <field name="l10n_do_fiscal_number" string="NCF"/>
+                </xpath>
+            </field>
+        </record>
+    </data>
+</odoo>

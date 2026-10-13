@@ -1,4 +1,7 @@
 import re
+import logging
+_logger = logging.getLogger(__name__)
+
 from psycopg2 import sql
 from werkzeug import urls
 
@@ -13,6 +16,49 @@ class AccountMove(models.Model):
 
     _l10n_do_sequence_field = "l10n_do_fiscal_number"
     _l10n_do_sequence_fixed_regex = r"^(?P<prefix1>.*?)(?P<seq>\d{0,8})$"
+
+    def _is_reconciled(self):
+        """Verificación silenciosa de conciliación"""
+        self.ensure_one()
+        return (self.payment_state in ('paid', 'in_payment') or
+                any(line.reconciled
+                    for line in self.line_ids.filtered(
+                        lambda l: l.account_id.reconcile
+                    )
+                )
+        )
+
+    # Método write modificado para evitar cambios en asientos conciliados
+    def write(self, vals):
+        # Solo aplicar si es una factura (no otros modelos)
+        if self._name == 'account.move':
+            # Contexto de PDF preview (vista previa)
+            if self.env.context.get('from_pdf_preview'):
+                _logger.debug("Modificación durante vista PDF bloqueada. Campos: %s", vals.keys())
+                return True  # Retorno temprano seguro
+
+            # Contexto de registro de attachment (nuevo caso)
+            if self.env.context.get('registering_attachment'):
+                _logger.debug("Validando modificación durante registro de adjunto")
+                protected_fields = {
+                    'payment_state', 'state', 'invoice_payment_state',
+                    'l10n_do_ecf_modification_code'
+                }
+                if any(field in vals for field in protected_fields):
+                    raise UserError(_(
+                        "Operación no permitida: La factura está conciliada. "
+                        "No se pueden modificar campos contables."
+                    ))
+
+        return super().write(vals)
+
+    # Método adicional para prevenir acciones no deseadas
+    @api.model
+    def fields_view_get(self, view_id=None, view_type='form', toolbar=False, submenu=False):
+        res = super().fields_view_get(view_id=view_id, view_type=view_type, toolbar=toolbar, submenu=submenu)
+        if view_type == 'form':
+            self = self.with_context(from_pdf_preview=True)
+        return res
 
     def _get_l10n_do_cancellation_type(self):
         """Return the list of cancellation types required by DGII."""
@@ -283,13 +329,14 @@ class AccountMove(models.Model):
         ).filtered(lambda i: not i.l10n_latam_manual_document_number)
 
         # first set all invoices l10n_do_company_in_contingency = False
-        self.write({"l10n_do_company_in_contingency": False})
+        #self.write({"l10n_do_company_in_contingency": False})
 
         # then get draft invoices and do the thing
         for invoice in self.filtered(lambda inv: inv.state == "draft"):
             invoice.l10n_do_company_in_contingency = bool(
                 ecf_invoices and not invoice.company_id.l10n_do_ecf_issuer
             )
+        self.filtered(lambda inv: inv.state != "draft").l10n_do_company_in_contingency = False
 
     @api.depends("l10n_do_ecf_security_code", "l10n_do_ecf_sign_date", "invoice_date")
     def _compute_l10n_do_electronic_stamp(self):
