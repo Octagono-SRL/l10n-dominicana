@@ -2,9 +2,10 @@ from . import common
 from odoo import fields
 from odoo.tests import tagged
 from odoo.exceptions import ValidationError
+import psycopg2
 
 
-@tagged("post_install")
+@tagged("-at_install", "post_install")
 class AccountMoveTest(common.L10nDOTestsCommon):
     def test_001_invoice_ncf_types(self):
         """
@@ -43,8 +44,9 @@ class AccountMoveTest(common.L10nDOTestsCommon):
             )
             .create(
                 {
-                    "refund_type": "percentage",
-                    "percentage": "5",
+                    "l10n_do_refund_type": "percentage",
+                    "l10n_do_percentage": "5",
+                    "journal_id": ncf_sale_credito_fiscal_invoice[0].journal_id.id,
                 }
             )
         )
@@ -132,6 +134,8 @@ class AccountMoveTest(common.L10nDOTestsCommon):
         )
 
         # Foreigner
+        # you cannot have multiple draft invoices with the same ncf
+        ncf_sale_consumo_invoice.unlink()
         ncf_sale_foreigner_invoice = self._create_l10n_do_invoice(
             data={
                 "partner": self.foreigner_partner,
@@ -158,6 +162,7 @@ class AccountMoveTest(common.L10nDOTestsCommon):
             data={
                 "document_number": "B0100000001",
                 "expense_type": "02",
+                "invoice_date": fields.Date.today(),
             },
             invoice_type="in_invoice",
         )
@@ -185,9 +190,10 @@ class AccountMoveTest(common.L10nDOTestsCommon):
             )
             .create(
                 {
-                    "refund_type": "percentage",
-                    "percentage": "5",
+                    "l10n_do_refund_type": "percentage",
+                    "l10n_do_percentage": "5",
                     "l10n_latam_document_number": "B0400000001",
+                    "journal_id": ncf_purchase_credito_fiscal_invoice[0].journal_id.id,
                 }
             )
         )
@@ -281,7 +287,7 @@ class AccountMoveTest(common.L10nDOTestsCommon):
         )
 
         # Credit Note
-        ecf_sale_credito_fiscal_invoice.with_context(testing=True)._post()
+        ecf_sale_credito_fiscal_invoice.with_context(l10n_do_active_test=True)._post()
         fiscal_sale_credit_note_wizard = (
             self.env["account.move.reversal"]
             .with_context(
@@ -290,8 +296,9 @@ class AccountMoveTest(common.L10nDOTestsCommon):
             )
             .create(
                 {
-                    "refund_type": "percentage",
-                    "percentage": "5",
+                    "l10n_do_refund_type": "percentage",
+                    "l10n_do_percentage": "5",
+                    "journal_id": ecf_sale_credito_fiscal_invoice[0].journal_id.id,
                 }
             )
         )
@@ -377,6 +384,8 @@ class AccountMoveTest(common.L10nDOTestsCommon):
         )
 
         # Foreigner
+        # you cannot have multiple draft invoices with the same ncf
+        ecf_sale_consumo_invoice.unlink()
         ecf_sale_foreigner_invoice = self._create_l10n_do_invoice(
             data={
                 "partner": self.foreigner_partner,
@@ -405,6 +414,7 @@ class AccountMoveTest(common.L10nDOTestsCommon):
                 "document_number": "E310000000001",
                 "expense_type": "02",
                 "document_type": self.do_document_type["e-fiscal"],
+                "invoice_date": fields.Date.today(),
             },
             invoice_type="in_invoice",
         )
@@ -423,7 +433,9 @@ class AccountMoveTest(common.L10nDOTestsCommon):
         )
 
         # Credit Note
-        ecf_purchase_credito_fiscal_invoice.with_context(testing=True)._post()
+        ecf_purchase_credito_fiscal_invoice.with_context(
+            l10n_do_active_test=True
+        )._post()
         fiscal_purchase_credit_note_wizard = (
             self.env["account.move.reversal"]
             .with_context(
@@ -432,9 +444,10 @@ class AccountMoveTest(common.L10nDOTestsCommon):
             )
             .create(
                 {
-                    "refund_type": "percentage",
-                    "percentage": "5",
+                    "l10n_do_refund_type": "percentage",
+                    "l10n_do_percentage": "5",
                     "l10n_latam_document_number": "B0400000001",
+                    "journal_id": ecf_purchase_credito_fiscal_invoice[0].journal_id.id,
                 }
             )
         )
@@ -528,6 +541,7 @@ class AccountMoveTest(common.L10nDOTestsCommon):
                 "partner": self.consumo_partner,
                 "document_number": "B1100000001",
                 "expense_type": "02",
+                "invoice_date": fields.Date.today(),
             },
             invoice_type="in_invoice",
         )
@@ -570,7 +584,7 @@ class AccountMoveTest(common.L10nDOTestsCommon):
                 "document_number": "E310000000001",
             }
         )
-        sale_invoice_1_id.with_context(testing=True)._post()
+        sale_invoice_1_id.with_context(l10n_do_active_test=True)._post()
 
         self.do_company.l10n_do_ecf_issuer = False
 
@@ -606,7 +620,7 @@ class AccountMoveTest(common.L10nDOTestsCommon):
                 "l10n_do_ecf_sign_date": sign_date,
             }
         )
-        sale_invoice_1_id.with_context(testing=True)._post()
+        sale_invoice_1_id.with_context(l10n_do_active_test=True)._post()
         self.assertEqual(sale_invoice_1_id.l10n_do_electronic_stamp, stamp)
 
     def test_007_unique_sequence_number(self):
@@ -622,13 +636,9 @@ class AccountMoveTest(common.L10nDOTestsCommon):
         )
         invoice_id._post()
 
-        invoice_2 = self._create_l10n_do_invoice(
-            data={
-                "document_number": "B0100000002",
-            }
-        )
+        invoice_2 = self._create_l10n_do_invoice()
         invoice_2._post()
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(psycopg2.errors.UniqueViolation):
             invoice_2.write({"l10n_do_fiscal_number": "B0100000001"})
 
     def test_008_check_sequence(self):
@@ -658,6 +668,7 @@ class AccountMoveTest(common.L10nDOTestsCommon):
             data={
                 "document_number": "B0100000001",
                 "expense_type": "02",
+                "invoice_date": fields.Date.today(),
             },
             invoice_type="in_invoice",
         )
@@ -672,6 +683,7 @@ class AccountMoveTest(common.L10nDOTestsCommon):
                 "partner": self.consumo_partner,
                 "document_number": "B1100000001",
                 "expense_type": "02",
+                "invoice_date": fields.Date.today(),
             },
             invoice_type="in_invoice",
         )
@@ -715,3 +727,95 @@ class AccountMoveTest(common.L10nDOTestsCommon):
 
         with self.assertRaises(ValidationError):
             self._create_l10n_do_invoice(data={"document_number": "B310000000001"})
+
+    def test_011_get_l10n_do_line_amounts(self):
+        invoice_1 = self._create_l10n_do_invoice(
+            data={
+                "document_number": "B0100000001",
+            }
+        )
+        self.assertDictEqual(
+            invoice_1._get_l10n_do_amounts(),
+            {
+                "base_amount": 100.0,
+                "exempt_amount": 0,
+                "isr_withholding_amount": 0,
+                "isr_withholding_base_amount": 0,
+                "itbis_0_base_amount": 0,
+                "itbis_0_tax_amount": 0,
+                "itbis_16_base_amount": 0,
+                "itbis_16_tax_amount": 0,
+                "itbis_18_base_amount": 100.0,
+                "itbis_18_tax_amount": 18.0,
+                "itbis_withholding_amount": 0,
+                "itbis_withholding_base_amount": 0,
+                "l10n_do_invoice_total": 118.0,
+            },
+        )
+
+        invoice_2 = self._create_l10n_do_invoice(
+            data={
+                "partner": self.consumo_partner,
+                "document_number": "B1100000001",
+                "expense_type": "02",
+            },
+            invoice_type="in_invoice",
+        )
+
+        self.assertDictEqual(
+            invoice_2._get_l10n_do_amounts(),
+            {
+                "base_amount": 100.0,
+                "exempt_amount": 0,
+                "isr_withholding_amount": 10.0,
+                "isr_withholding_base_amount": 100.0,
+                "itbis_0_base_amount": 0,
+                "itbis_0_tax_amount": 0,
+                "itbis_16_base_amount": 0,
+                "itbis_16_tax_amount": 0,
+                "itbis_18_base_amount": 100.0,
+                "itbis_18_tax_amount": 18.0,
+                "itbis_withholding_amount": 18.0,
+                "itbis_withholding_base_amount": 100.0,
+                "l10n_do_invoice_total": 118.0,
+            },
+        )
+
+        invoice_3 = self._create_l10n_do_invoice(
+            data={
+                "document_number": "B0100000002",
+                "currency": self.usd_currency,
+            }
+        )
+
+        self.assertDictEqual(
+            invoice_3._get_l10n_do_amounts(),
+            {
+                "base_amount": 100.0,
+                "base_amount_currency": 5900.000000825999,
+                "exempt_amount": 0,
+                "exempt_amount_currency": 0.0,
+                "isr_withholding_amount": 0,
+                "isr_withholding_amount_currency": 0.0,
+                "isr_withholding_base_amount": 0,
+                "isr_withholding_base_amount_currency": 0.0,
+                "itbis_0_base_amount": 0,
+                "itbis_0_base_amount_currency": 0.0,
+                "itbis_0_tax_amount": 0,
+                "itbis_0_tax_amount_currency": 0.0,
+                "itbis_16_base_amount": 0,
+                "itbis_16_base_amount_currency": 0.0,
+                "itbis_16_tax_amount": 0,
+                "itbis_16_tax_amount_currency": 0.0,
+                "itbis_18_base_amount": 100.0,
+                "itbis_18_base_amount_currency": 5900.000000825999,
+                "itbis_18_tax_amount": 18.0,
+                "itbis_18_tax_amount_currency": 1062.0000001486799,
+                "itbis_withholding_amount": 0,
+                "itbis_withholding_amount_currency": 0.0,
+                "itbis_withholding_base_amount": 0,
+                "itbis_withholding_base_amount_currency": 0.0,
+                "l10n_do_invoice_total": 118.0,
+                "l10n_do_invoice_total_currency": 6962.000000974679,
+            },
+        )

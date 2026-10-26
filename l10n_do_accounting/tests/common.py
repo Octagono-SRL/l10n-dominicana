@@ -4,19 +4,27 @@ from odoo.addons.account.tests.common import AccountTestInvoicingCommon
 
 class L10nDOTestsCommon(AccountTestInvoicingCommon):
     @classmethod
-    def setUpClass(cls, chart_template_ref="l10n_do.do_chart_template"):
+    def setUpClass(cls, chart_template_ref="do"):
         super(L10nDOTestsCommon, cls).setUpClass(chart_template_ref=chart_template_ref)
 
-        cls.company_data["company"].write(
+        cls.do_company = cls.setup_company_data(
+            "INDEXA SRL",
+            chart_template=chart_template_ref,
+            vat="131793916",
+            street="dummy address",
+            country_id=cls.env.ref("base.do").id,
+        )["company"]
+
+        # multi-currency variables
+        cls.usd_currency = cls.env.ref("base.USD")
+        cls.env["res.currency.rate"].create(
             {
-                "currency_id": cls.env.ref("base.DOP").id,
-                "name": "INDEXA SRL",
-                "vat": "131793916",
-                "street": "dummy address",
-                "country_id": cls.env.ref("base.do").id,
+                "currency_id": cls.usd_currency.id,
+                "rate": 0.01694915254,
+                "company_id": cls.do_company.id,
             }
         )
-        cls.do_company = cls.company_data["company"]
+
         cls.fiscal_partner = cls.env["res.partner"].create(
             {
                 "name": "ITERATIVO SRL",
@@ -108,6 +116,8 @@ class L10nDOTestsCommon(AccountTestInvoicingCommon):
             invoice_form.partner_id = data.get("partner", self.fiscal_partner)
             if "in_" not in invoice_type:
                 invoice_form.journal_id = data.get("journal", self.fiscal_sale_journal)
+            else:
+                invoice_form.journal_id = self.fiscal_purchase_journal
             if data.get("invoice_date"):
                 invoice_form.invoice_date = data.get("invoice_date")
             if data.get("document_type"):
@@ -127,20 +137,23 @@ class L10nDOTestsCommon(AccountTestInvoicingCommon):
                     invoice_line_form.price_unit = line.get("price_unit", 100)
 
                     ncf_type = invoice_form.l10n_latam_document_type_id.l10n_do_ncf_type
-                    if ncf_type[-7:] == "special":
+                    if ncf_type and ncf_type[-7:] == "special":
                         invoice_line_form.tax_ids.clear()
-                    elif ncf_type[-8:] == "informal":
+                    elif ncf_type and ncf_type[-8:] == "informal":
+                        company_tax_prefix = "account.%s_" % invoice_form.company_id.id
                         invoice_line_form.tax_ids.clear()
-                        taxes = self.env["account.tax"].search(
+                        taxes = self.env["account.tax"].browse(
                             [
-                                ("company_id", "=", invoice_form.journal_id.id),
-                                ("type_tax_use", "=", "purchase"),
-                                ("amount", "in", (18, -18, -10)),
-                            ],
-                            limit=3,
+                                self.env.ref(company_tax_prefix + "tax_18_purch").id,
+                                self.env.ref(
+                                    company_tax_prefix + "ret_100_tax_person"
+                                ).id,
+                                self.env.ref(
+                                    company_tax_prefix + "ret_10_income_person"
+                                ).id,
+                            ]
                         )
                         for tax in taxes:
                             invoice_line_form.tax_ids.add(tax)
-            invoice_form.invoice_date = invoice_form.date
         invoice = invoice_form.save()
         return invoice
