@@ -8,12 +8,11 @@
     "category": "Localization",
     "license": "LGPL-3",
     "website": "https://github.com/odoo-dominicana",
-    "version": "19.0.1.0.0",
+    "version": "20.0.1.0.0",
     # any module necessary for this one to work correctly
     "depends": ["l10n_latam_invoice_document", "l10n_do"],
     # always loaded
     "data": [
-        "security/ir.model.access.csv",
         "security/res_groups.xml",
         "data/l10n_latam.document.type.csv",
         "wizard/account_move_reversal_views.xml",
@@ -29,6 +28,7 @@
         "views/report_templates.xml",
         "views/report_invoice.xml",
         "views/reset_ncf.xml",
+        'security/ir.access.csv',
     ],
     # only loaded in demonstration mode
     "demo": [

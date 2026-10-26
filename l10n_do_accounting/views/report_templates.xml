@@ -13,24 +13,15 @@
         </xpath>
     </template>
 
-    <!-- do not show partner address on document header when l10n do invoice -->
-    <template id="external_layout_clean_inherited" inherit_id="web.external_layout_bold">
-        <xpath expr="//div[@name='company_address']" position="attributes">
-            <attribute name="t-if">doc_model != "account.move" or (doc_model == "account.move" and o.country_code != "DO")</attribute>
-        </xpath>
-    </template>
-    <template id="external_layout_standard_inherited" inherit_id="web.external_layout_standard">
-        <xpath expr="//div[@name='company_address']" position="attributes">
-            <attribute name="t-if">doc_model != "account.move" or (doc_model == "account.move" and o.country_code != "DO")</attribute>
-        </xpath>
-    </template>
-    <template id="external_layout_background_inherited" inherit_id="web.external_layout_striped">
-        <xpath expr="//div[@name='company_address']" position="attributes">
-            <attribute name="t-if">doc_model != "account.move" or (doc_model == "account.move" and o.country_code != "DO")</attribute>
-        </xpath>
-    </template>
-    <template id="external_layout_boxed_inherited" inherit_id="web.external_layout_boxed">
-        <xpath expr="//div[@name='company_address']" position="attributes">
+    <!-- do not show company address on document header when l10n do invoice.
+         20.0 replaced the 4 separate full-layout templates this used to
+         patch (external_layout_bold/standard/striped/boxed, each with its
+         own <div name="company_address">) with 8 report-style templates
+         (wave/bubble/folder/center/dual/lines/compact/standard) that all
+         delegate to one shared web.company_address_list template instead,
+         so a single patch there now covers every style. -->
+    <template id="company_address_list_do_inherited" inherit_id="web.company_address_list">
+        <xpath expr="//ul[@name='company_address_list']" position="attributes">
             <attribute name="t-if">doc_model != "account.move" or (doc_model == "account.move" and o.country_code != "DO")</attribute>
         </xpath>
     </template>
