@@ -824,13 +824,16 @@ class AccountMove(models.Model):
             if not invoice.amount_total:
                 raise UserError(_("Fiscal invoice cannot be posted with amount zero."))
 
-        non_payer_type_invoices = l10n_do_invoices.filtered(
+        l10n_do_invoices._l10n_do_check_partner_tax_payer_type()
+
+        return res
+
+    def _l10n_do_check_partner_tax_payer_type(self):
+        non_payer_type_invoices = self.filtered(
             lambda inv: not inv.partner_id.l10n_do_dgii_tax_payer_type
         )
         if non_payer_type_invoices:
             raise ValidationError(_("Fiscal invoices require partner fiscal type"))
-
-        return res
 
     def _l10n_do_get_formatted_sequence(self):
         self.ensure_one()
@@ -962,7 +965,11 @@ class AccountMove(models.Model):
 
         regex = self._l10n_do_sequence_fixed_regex
 
-        format_values = re.match(regex, previous).groupdict()
+        match = re.match(regex, previous or "")
+        if not match:
+            # A previous number that is not an NCF must not crash the posting
+            return super(AccountMove, self)._get_sequence_format_param(previous)
+        format_values = match.groupdict()
         format_values["seq_length"] = len(format_values["seq"])
         format_values["seq"] = int(format_values.get("seq") or 0)
 
