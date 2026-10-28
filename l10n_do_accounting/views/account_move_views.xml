@@ -69,7 +69,7 @@
 
             <!-- only computed when l10n_do ecf invoice -->
             <xpath expr="//page[@id='invoice_tab']/field[@name='invoice_line_ids']/tree/field[@name='tax_ids']" position="after">
-                <field name="l10n_do_itbis_amount" invisible="1" force_save="1"/>
+                <field name="l10n_do_itbis_amount" column_invisible="1" force_save="1"/>
             </xpath>
             <!-- payment_id no longer exists in this tree at all in Odoo
                  16.0 core (verified live against the odoo:16.0 image's own
@@ -78,7 +78,7 @@
                  field in the same tree works as the anchor; account_id is
                  the tree's own first field and always present. -->
             <xpath expr="//page[@id='aml_tab']/field[@name='line_ids']/tree/field[@name='account_id']" position="after">
-                <field name="l10n_do_itbis_amount" invisible="1" force_save="1"/>
+                <field name="l10n_do_itbis_amount" column_invisible="1" force_save="1"/>
             </xpath>
         </field>
     </record>
