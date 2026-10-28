@@ -14,7 +14,7 @@
                     <field name="l10n_do_document_type_ids" nolabel="1" colspan="2">
                         <list create="false" delete="false" editable="top"
                               default_order="l10n_latam_document_type_id">
-                            <field name="journal_id" invisible="1"/>
+                            <field name="journal_id" column_invisible="1"/>
                             <field name="l10n_latam_document_type_id"/>
                             <field name="l10n_do_ncf_expiration_date"/>
                         </list>
