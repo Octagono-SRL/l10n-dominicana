@@ -52,8 +52,11 @@
                  partner_id field on this form (there is a second, unrelated
                  one inside the invoice lines tree, column_invisible, no
                  such widget), so this is both more robust against future
-                 layout changes and no longer coupled to nesting depth. -->
-            <xpath expr="//field[@name='partner_id'][@widget='res_partner_many2one']" position="after">
+                 layout changes and no longer coupled to nesting depth.
+                 The /.. keeps these fields out of that div: Odoo only draws
+                 the label of a field that is a direct child of a group, so
+                 inside the div they showed up with no label. -->
+            <xpath expr="//field[@name='partner_id'][@widget='res_partner_many2one']/.." position="after">
                 <xpath expr="//field[@name='l10n_latam_document_type_id']" position="move"/>
                 <xpath expr="//field[@name='l10n_latam_document_number']" position="move"/>
                 <field name="l10n_do_origin_ncf" invisible="((move_type not in ('in_refund', 'out_refund') and debit_origin_id == False) or (move_type in ('in_refund', 'out_refund') and (l10n_latam_use_documents == False or country_code != 'DO')))" readonly="state != 'draft'" required="((move_type in ('in_refund', 'out_refund') and l10n_latam_use_documents == True) or debit_origin_id != False)"/>
