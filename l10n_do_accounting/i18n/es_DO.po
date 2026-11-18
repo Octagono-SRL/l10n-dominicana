@@ -1017,7 +1017,7 @@ msgid "Record a new vendor debit note"
 msgstr "Registrar una nueva Nota de Débito del proveedor"
 
 #. module: l10n_do_accounting
-#: code:addons/l10n_do_accounting/models/account_move.py:0
+#: code:addons/l10n_do_accounting/wizard/account_move_reversal.py:0
 #, python-format
 msgid "Refund"
 msgstr "Reembolso"
@@ -1070,6 +1070,12 @@ msgstr "Campo almacenado equivalente a l10n_latam_document_number"
 #: model:ir.model.fields.selection,name:l10n_do_accounting.selection__l10n_latam_document_type__internal_type__in_credit_note
 msgid "Supplier Credit Note"
 msgstr "Nota de Crédito de Proveedor"
+
+#. module: l10n_do_accounting
+#: code:addons/l10n_do_accounting/wizard/account_debit_note.py:0
+#, python-format
+msgid "Debit Note"
+msgstr "Nota de débito"
 
 #. module: l10n_do_accounting
 #: model:ir.model.fields.selection,name:l10n_do_accounting.selection__l10n_latam_document_type__internal_type__in_debit_note

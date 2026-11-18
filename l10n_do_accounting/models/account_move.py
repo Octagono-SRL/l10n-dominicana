@@ -227,21 +227,26 @@ class AccountMove(models.Model):
             and not inv.l10n_latam_manual_document_number
         )
         for invoice in l10n_do_internal_invoices:
-            invoice.l10n_do_enable_first_sequence = not bool(
-                self.search_count(
-                    [
-                        ("company_id", "=", invoice.company_id.id),
-                        ("move_type", "=", invoice.move_type),
-                        (
-                            "l10n_latam_document_type_id",
-                            "=",
-                            invoice.l10n_latam_document_type_id.id,
-                        ),
-                        ("posted_before", "=", True),
-                        ("id", "!=", invoice.id or invoice._origin.id),
-                    ],
-                )
-            ) or invoice.l10n_do_show_expiration_date_msg
+            domain = [
+                ("company_id", "=", invoice.company_id.id),
+                (
+                    "l10n_latam_document_type_id",
+                    "=",
+                    invoice.l10n_latam_document_type_id.id,
+                ),
+                ("posted_before", "=", True),
+                ("id", "!=", invoice.id or invoice._origin.id),
+            ]
+            if invoice.l10n_latam_document_type_id.l10n_do_ncf_type == "e-credit_note":
+                # one E34 range for out_refund and in_refund, see
+                # _get_last_sequence_domain
+                domain.append(("l10n_latam_manual_document_number", "=", False))
+            else:
+                domain.append(("move_type", "=", invoice.move_type))
+            invoice.l10n_do_enable_first_sequence = (
+                not bool(self.search_count(domain))
+                or invoice.l10n_do_show_expiration_date_msg
+            )
 
         (self - l10n_do_internal_invoices).l10n_do_enable_first_sequence = False
 
@@ -678,36 +683,6 @@ class AccountMove(models.Model):
 
         return super(AccountMove, self)._onchange_partner_id()
 
-    def _reverse_move_vals(self, default_values, cancel=True):
-        ctx = self.env.context
-        amount = ctx.get("amount")
-        percentage = ctx.get("percentage")
-        refund_type = ctx.get("refund_type")
-        reason = ctx.get("reason")
-        l10n_do_ecf_modification_code = ctx.get("l10n_do_ecf_modification_code")
-
-        res = super(AccountMove, self)._reverse_move_vals(
-            default_values=default_values, cancel=cancel
-        )
-        if self.country_code != "DO":
-            return res
-
-        if self.country_code == "DO":
-            res["l10n_do_origin_ncf"] = self.ref
-            res["l10n_do_ecf_modification_code"] = l10n_do_ecf_modification_code
-
-        if refund_type in ("percentage", "fixed_amount"):
-            price_unit = (
-                amount
-                if refund_type == "fixed_amount"
-                else self.amount_untaxed * (percentage / 100)
-            )
-            res["line_ids"] = False
-            res["invoice_line_ids"] = [
-                (0, 0, {"name": reason or _("Refund"), "price_unit": price_unit})
-            ]
-        return res
-
     @api.depends("l10n_latam_document_type_id", "journal_id")
     def _compute_l10n_latam_manual_document_number(self):
         l10n_do_recs_with_journal_id = self.filtered(
@@ -750,65 +725,48 @@ class AccountMove(models.Model):
             "e-exterior",
         )
 
+    def _get_invoice_currency_rate_date(self):
+        """A credit note in foreign currency takes the rate of the invoice it
+        reverses (DGII), not the rate of its own date. Same as
+        l10n_do_dgii_factura_electronica did on 17.0 (account.move.line
+        _get_rate_date, no longer used from 18.0)."""
+        self.ensure_one()
+        origin = self.reversed_entry_id
+        if (
+            origin
+            and self.country_code == "DO"
+            and self.currency_id != self.company_id.currency_id
+        ):
+            origin_date = origin.invoice_date or origin.date
+            if origin_date:
+                return origin_date
+        return super()._get_invoice_currency_rate_date()
+
     def _get_debit_line_tax(self, debit_date):
-        if self.move_type == "out_invoice":
-            return (
-                self.company_id.account_sale_tax_id
-                or self.env.ref("l10n_do.%s_tax_18_sale" % self.company_id.id)
-                if (debit_date - self.invoice_date).days <= 30
-                and self.partner_id.l10n_do_dgii_tax_payer_type != "special"
-                else self.env.ref("l10n_do.%s_tax_0_sale" % self.company_id.id) or False
-            )
-        else:
-            return self.company_id.account_purchase_tax_id or self.env.ref(
-                "l10n_do.%s_tax_0_purch" % self.company_id.id
-            )
+        """Tax of a Percentage/Amount debit note line (same rule as 14).
 
-    def _move_autocomplete_invoice_lines_create(self, vals_list):
-        ctx = self.env.context
-        refund_type = ctx.get("refund_type")
-        refund_debit_type = ctx.get("l10n_do_debit_type", refund_type)
-        if refund_debit_type and refund_debit_type in ("percentage", "fixed_amount"):
-            for vals in vals_list:
-                del vals["line_ids"]
-                origin_invoice_id = self.browse(self.env.context.get("active_ids"))
-                taxes = (
-                    [
-                        (
-                            6,
-                            0,
-                            [
-                                origin_invoice_id._get_debit_line_tax(
-                                    vals["invoice_date"]
-                                ).id
-                            ],
-                        )
-                    ]
-                    if ctx.get("l10n_do_debit_type", False)
-                    else [(5, 0)]
-                )
-                price_unit = (
-                    ctx.get("amount")
-                    if refund_debit_type == "fixed_amount"
-                    else origin_invoice_id.amount_untaxed
-                    * (ctx.get("percentage") / 100)
-                )
-                vals["invoice_line_ids"] = [
-                    (
-                        0,
-                        0,
-                        {
-                            "name": ctx.get("reason") or _("Refund"),
-                            "price_unit": price_unit,
-                            "quantity": 1,
-                            "tax_ids": taxes,
-                        },
-                    )
-                ]
+        Sales: the company sale tax (ITBIS 18%) up to 30 days after the
+        invoice and for non special partners, exempt otherwise. Purchases:
+        the company purchase tax. The DO chart taxes live under the
+        `account` module since 17.0 (`l10n_do.` in 14).
+        """
+        self.ensure_one()
+        company = self.company_id
 
-        return super(AccountMove, self)._move_autocomplete_invoice_lines_create(
-            vals_list
-        )
+        def chart_tax(name):
+            return self.env.ref(
+                "account.%s_%s" % (company.id, name), raise_if_not_found=False
+            ) or self.env["account.tax"]
+
+        if self.is_sale_document():
+            invoice_date = self.invoice_date or self.date
+            if (
+                not invoice_date
+                or (debit_date - invoice_date).days <= 30
+            ) and self.partner_id.l10n_do_dgii_tax_payer_type != "special":
+                return company.account_sale_tax_id or chart_tax("tax_18_sale")
+            return chart_tax("tax_0_sale")
+        return company.account_purchase_tax_id or chart_tax("tax_0_purch")
 
     def _post(self, soft=True):
         res = super()._post(soft)
@@ -883,9 +841,16 @@ class AccountMove(models.Model):
                 " company_id = %(company_id)s AND l10n_do_sequence_prefix != ''"
                 " AND l10n_do_sequence_prefix IS NOT NULL"
             )
+            # DGII authorizes one E34 range per company: credit notes we
+            # number on sales (out_refund) and on our own purchase documents
+            # (in_refund, e.g. E41/E43) share it. Same rule as
+            # l10n_do_dgii_factura_electronica, limited to E34 so paper B04
+            # ranges keep their per-type numbering.
             if (
                 not self.l10n_latam_manual_document_number
                 and self.move_type != "in_refund"
+                and self.l10n_latam_document_type_id.l10n_do_ncf_type
+                != "e-credit_note"
             ):
                 where_string += " AND move_type = %(move_type)s"
                 param["move_type"] = self.move_type
