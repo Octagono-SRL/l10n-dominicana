@@ -1,25 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
 
-    <!-- Ported for Odoo 17.0: core replaced the old refund_method radio
-         field (values 'refund'/'cancel'/'modify') with two separate
-         footer buttons (refund_moves / modify_moves), each calling the
-         same reverse_moves(is_modify=...) directly; refund_method is
-         gone from both the view and the model entirely. Reproduced live,
-         this exact gap crashed production's own post-migration DEPLOY:
-         "Element xpath refund_method cannot be located in parent view".
-         This module's own fields (refund_type/refund_action) already
-         expressed a finer-grained choice than refund_method ever did,
-         and account_move_reversal.py (this same module) now computes
-         is_modify from refund_action directly instead of bridging
-         through the removed field; see that file's own reverse_moves()
-         override. Re-anchored every xpath below to fields that still
-         exist on the simplified 17.0 form (reason/date), and
-         'refund_method' comparisons inside l10n_latam_document_type_id's
-         own conditions became 'refund_action' == 'draft_refund' (the
-         exact same case onchange_refund_action used to map to
-         refund_method == 'refund', before that bridging method existed
-         at all). -->
+    <!-- Odoo 17.0 replaced the refund_method radio with two footer buttons
+         (refund_moves / modify_moves). Full refunds follow the button that
+         was clicked; for Percentage/Amount, refund_action decides: keep the
+         credit note in draft, or post it and reconcile it with the invoice
+         (see reverse_moves in account_move_reversal.py). -->
     <record id="view_account_move_reversal_inherited" model="ir.ui.view">
         <field name="name">view.account.move.reversal.inherited</field>
         <field name="model">account.move.reversal</field>

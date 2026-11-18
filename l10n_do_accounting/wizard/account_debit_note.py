@@ -1,4 +1,4 @@
-from odoo import models, fields, api, _
+from odoo import models, fields, api, Command, _
 from odoo.exceptions import UserError, AccessError
 
 
@@ -171,12 +171,33 @@ class AccountDebitNote(models.TransientModel):
                     l10n_do_expense_type=move.l10n_do_expense_type,
                     l10n_do_income_type=move.l10n_do_income_type,
                     invoice_origin=move.name,
-                    line_ids=[],
-                    l10n_do_fiscal_number=move.name,
                 )
             )
+            if not self.copy_lines:
+                res["line_ids"] = self._l10n_do_debit_lines(move, res)
 
         return res
+
+    def _l10n_do_debit_lines(self, move, default_values):
+        """Line of a Percentage/Amount debit note, like l10n_do 14: named
+        after the reason, quantity 1, the percentage of the invoice untaxed
+        amount (or the amount typed) and the debit note tax. With "Copy
+        Lines" the invoice lines are copied instead (core behaviour)."""
+        price_unit = (
+            self.l10n_do_amount
+            if self.l10n_do_debit_type == "fixed_amount"
+            else move.amount_untaxed * (self.l10n_do_percentage or 0.0) / 100.0
+        )
+        debit_date = default_values.get("invoice_date") or self.date or move.date
+        line = {
+            "name": self.reason or _("Debit Note"),
+            "quantity": 1,
+            "price_unit": move.currency_id.round(price_unit),
+            "tax_ids": [Command.set(move._get_debit_line_tax(debit_date).ids)],
+        }
+        if self.l10n_do_account_id:
+            line["account_id"] = self.l10n_do_account_id.id
+        return [Command.create(line)]
 
     def create_debit(self):
         if self.l10n_latam_use_documents and self.l10n_latam_country_code:

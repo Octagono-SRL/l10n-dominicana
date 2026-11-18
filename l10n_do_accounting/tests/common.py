@@ -4,8 +4,24 @@ from odoo.addons.account.tests.common import AccountTestInvoicingCommon
 
 class L10nDOTestsCommon(AccountTestInvoicingCommon):
     @classmethod
-    def setUpClass(cls, chart_template_ref="l10n_do.do_chart_template"):
-        super(L10nDOTestsCommon, cls).setUpClass(chart_template_ref=chart_template_ref)
+    def setup_company_data(cls, company_name, chart_template=None, **kwargs):
+        # the DO chart of accounts refuses to load on a company without a VAT
+        kwargs.setdefault("vat", "131793916")
+        kwargs.setdefault("country_id", cls.env.ref("base.do").id)
+        return super().setup_company_data(
+            company_name, chart_template=chart_template, **kwargs
+        )
+
+    @classmethod
+    def setUpClass(cls, chart_template_ref="do"):
+        super().setUpClass(chart_template_ref=chart_template_ref)
+
+        cls.env.user.groups_id |= (
+            cls.env.ref("l10n_do_accounting.group_l10n_do_fiscal_credit_note")
+            | cls.env.ref("l10n_do_accounting.group_l10n_do_fiscal_invoice_cancel")
+            | cls.env.ref("l10n_do_accounting.group_l10n_do_edit_fiscal_partner")
+            | cls.env.ref("l10n_do_accounting.group_l10n_do_debit_note")
+        )
 
         cls.company_data["company"].write(
             {

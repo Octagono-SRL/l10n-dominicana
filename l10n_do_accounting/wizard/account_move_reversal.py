@@ -1,4 +1,4 @@
-from odoo import models, api, fields, _
+from odoo import models, api, fields, Command, _
 from odoo.exceptions import UserError
 
 
@@ -113,26 +113,102 @@ class AccountMoveReversal(models.TransientModel):
 
         return res
 
+    def _l10n_do_partial_refund_lines(self, move):
+        """Lines of a Percentage/Amount credit note.
+
+        Like l10n_do 14: one line named after the reason, quantity 1, priced
+        at the percentage of the invoice untaxed amount (or the amount typed,
+        before taxes). It now keeps the invoice taxes (DGII: a credit note
+        must carry its share of the ITBIS), so an invoice mixing taxes gives
+        one line per account and taxes, each with its share of the amount.
+        """
+        groups = {}
+        for line in move.invoice_line_ids.filtered(
+            lambda l: l.display_type == "product"
+        ):
+            key = (line.account_id, line.tax_ids)
+            group = groups.setdefault(key, {"subtotal": 0.0, "price": 0.0})
+            group["subtotal"] += line.price_subtotal
+            # with price-included taxes the unit price carries the tax
+            group["price"] += (
+                line.price_total
+                if any(line.tax_ids.mapped("price_include"))
+                else line.price_subtotal
+            )
+        untaxed = sum(g["subtotal"] for g in groups.values())
+        if self.refund_type == "percentage":
+            ratio = (self.percentage or 0.0) / 100.0
+        else:
+            ratio = (self.amount or 0.0) / untaxed if untaxed else 0.0
+
+        currency = move.currency_id
+        name = self.reason or _("Refund")
+        commands = []
+        left = self.amount or 0.0
+        keys = list(groups)
+        for index, key in enumerate(keys):
+            account, taxes = key
+            group = groups[key]
+            price = currency.round(group["price"] * ratio)
+            if self.refund_type == "fixed_amount" and group["price"] == group["subtotal"]:
+                if index == len(keys) - 1:
+                    price = currency.round(left)  # no cent lost to rounding
+                left -= price
+            commands.append(
+                Command.create(
+                    {
+                        "name": name,
+                        "quantity": 1,
+                        "price_unit": price,
+                        "account_id": account.id,
+                        "tax_ids": [Command.set(taxes.ids)],
+                    }
+                )
+            )
+        if not commands:
+            commands.append(
+                Command.create(
+                    {
+                        "name": name,
+                        "quantity": 1,
+                        "price_unit": currency.round(
+                            self.amount
+                            if self.refund_type == "fixed_amount"
+                            else move.amount_untaxed * ratio
+                        ),
+                    }
+                )
+            )
+        return commands
+
+    def _prepare_default_reversal(self, move):
+        res = super()._prepare_default_reversal(move)
+        if move.country_code != "DO":
+            return res
+
+        # Odoo 17 reverses by copy(), so the old _reverse_move_vals hook never
+        # runs: origin NCF, modification code and the partial line go here.
+        # The origin is the NCF/e-NCF of the invoice (l10n_do_fiscal_number,
+        # like l10n_do_dgii_factura_electronica did), the reference otherwise.
+        res["l10n_do_origin_ncf"] = move.l10n_do_fiscal_number or move.ref
+        res["l10n_do_ecf_modification_code"] = self.l10n_do_ecf_modification_code
+        if self.refund_type in ("percentage", "fixed_amount"):
+            res["line_ids"] = self._l10n_do_partial_refund_lines(move)
+        return res
+
     def reverse_moves(self, is_modify=False):
-        # Odoo 17.0 dropped the old refund_method selection field
-        # ('refund'/'cancel'/'modify') this module used to bridge onto via
-        # onchange_refund_type/onchange_refund_action (both removed) in
-        # favor of a single is_modify flag core's own two footer buttons
-        # (refund_moves/modify_moves) pass directly. That collapsed
-        # 16.0's three-way choice into two: is_modify=False matches the
-        # old 'refund' behaviour (not cancelled), is_modify=True matches
-        # the old 'modify' behaviour (cancelled AND a new draft copy
-        # created) -- there is no longer a core equivalent of the old
-        # 'cancel'-without-a-copy option. This module's own refund_action
-        # field ('draft_refund'/'apply_refund') is the authoritative
-        # choice here regardless of which of core's two footer buttons
-        # actually got clicked, exactly as it already overrode the old
-        # refund_method via onchange; 'apply_refund' maps to is_modify=True
-        # since preserving "the original gets cancelled" matters more for
-        # DGII e-invoice compliance than whether an extra draft copy also
-        # appears.
-        computed_is_modify = self.refund_action == "apply_refund"
-        return super(
+        self.ensure_one()
+        is_partial = self.country_code == "DO" and self.refund_type in (
+            "percentage",
+            "fixed_amount",
+        )
+        apply_refund = is_partial and self.refund_action == "apply_refund"
+        if is_partial:
+            # A partial credit note never cancels the invoice nor re-creates
+            # it. Full refunds keep the button the user clicked: "Reverse" or
+            # "Reverse and Create Invoice" (refund_method refund/modify in 14).
+            is_modify = False
+        action = super(
             AccountMoveReversal,
             self.with_context(
                 refund_type=self.refund_type,
@@ -141,7 +217,30 @@ class AccountMoveReversal(models.TransientModel):
                 reason=self.reason,
                 l10n_do_ecf_modification_code=self.l10n_do_ecf_modification_code,
             ),
-        ).reverse_moves(is_modify=computed_is_modify)
+        ).reverse_moves(is_modify=is_modify)
+        if apply_refund:
+            self._l10n_do_apply_refunds(self.new_move_ids)
+        return action
+
+    def _l10n_do_apply_refunds(self, refunds):
+        """'Full Refund' action on a partial credit note (refund_method
+        'cancel' in 14): post the credit note and reconcile it with the
+        invoice. Payments already reconciled with the invoice stay as they are.
+        """
+        refunds = refunds.filtered(
+            lambda m: m.state == "draft" and m.auto_post == "no"
+        )
+        refunds.action_post()
+        for refund in refunds:
+            invoice = refund.reversed_entry_id
+            if not invoice or invoice.state != "posted":
+                continue
+            for line in refund.line_ids.filtered(
+                lambda l: l.account_id.account_type
+                in ("asset_receivable", "liability_payable")
+                and not l.reconciled
+            ):
+                invoice.js_assign_outstanding_line(line.id)
 
     @api.depends("move_ids", "journal_id")
     def _compute_document_type(self):
@@ -187,21 +286,3 @@ class AccountMoveReversal(models.TransientModel):
                     refund.l10n_latam_available_document_type_ids
                 )
         super(AccountMoveReversal, self - do_wizard)._compute_document_type()
-
-    @api.depends("l10n_latam_document_type_id")
-    def _compute_l10n_latam_manual_document_number(self):
-        self.l10n_latam_manual_document_number = False
-        do_wizard = self.filtered(
-            lambda w: w.journal_id
-            and w.journal_id.l10n_latam_use_documents
-            and w.country_code == "DO"
-            and w.move_ids
-        )
-        for rec in do_wizard:
-            if rec.journal_id and rec.journal_id.l10n_latam_use_documents:
-                rec.l10n_latam_manual_document_number = self.env[
-                    "account.move"
-                ]._is_manual_document_number(rec.journal_id)
-        super(
-            AccountMoveReversal, self - do_wizard
-        )._compute_l10n_latam_manual_document_number()

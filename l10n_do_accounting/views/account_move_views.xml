@@ -23,6 +23,13 @@
                     Notice. Document Number field enabled because a new Fiscal Number Expiration date was set on journal
                 </div>
             </xpath>
+            <!-- Debit note button next to "Credit Note", as core has it from 19.0 -->
+            <xpath expr="//button[@name='action_reverse']" position="after">
+                <button name="action_debit_note" string="Debit Note"
+                        type="object" groups="account.group_account_invoice"
+                        invisible="move_type not in ('out_invoice', 'in_invoice', 'out_refund', 'in_refund') or state != 'posted'"
+                        data-hotkey="shift+d"/>
+            </xpath>
             <xpath expr="//button[@name='button_cancel']" position="attributes">
                 <attribute name="invisible">id == False or (state != 'draft' and country_code != 'DO') or (state in ('draft', 'cancel') and country_code == 'DO')</attribute>
             </xpath>

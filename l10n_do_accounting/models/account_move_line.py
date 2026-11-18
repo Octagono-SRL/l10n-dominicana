@@ -58,3 +58,20 @@ class AccountMoveLine(models.Model):
                 [t["amount"] for t in itbis_taxes_data["taxes"]]
             )
         return res
+
+    def _get_rate_date(self):
+        """A credit note in foreign currency takes the rate of the invoice it
+        reverses (DGII), not the rate of its own date. Same as
+        l10n_do_dgii_factura_electronica."""
+        self.ensure_one()
+        move = self.move_id
+        origin = move.reversed_entry_id
+        if (
+            origin
+            and move.country_code == "DO"
+            and move.currency_id != move.company_id.currency_id
+        ):
+            origin_date = origin.invoice_date or origin.date
+            if origin_date:
+                return origin_date
+        return super()._get_rate_date()
