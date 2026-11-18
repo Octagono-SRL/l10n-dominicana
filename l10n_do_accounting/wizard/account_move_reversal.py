@@ -60,6 +60,9 @@ class AccountMoveReversal(models.TransientModel):
             "account.move"
         ]._get_l10n_do_ecf_modification_code(),
         string="e-CF Modification Code",
+        compute="_compute_l10n_do_ecf_modification_code",
+        store=True,
+        readonly=False,
         copy=False,
     )
     is_ecf_invoice = fields.Boolean(
@@ -71,6 +74,28 @@ class AccountMoveReversal(models.TransientModel):
         "type, so it needs the e-CF modification code, also when the "
         "supplier issued it and its number is typed by hand.",
     )
+
+    @api.depends(
+        "refund_type",
+        "l10n_latam_document_type_id",
+        "is_ecf_invoice",
+        "l10n_latam_manual_document_number",
+    )
+    def _compute_l10n_do_ecf_modification_code(self):
+        """Prefill the code an e-CF note needs (the user can still change
+        it): 01 Total Cancellation for a full refund, 03 Amount correction
+        for Percentage/Amount, as the Miramar POS refunds do."""
+        for wizard in self:
+            ncf_type = wizard.l10n_latam_document_type_id.l10n_do_ncf_type or ""
+            asks_code = ncf_type.startswith("e-") or (
+                wizard.is_ecf_invoice and not wizard.l10n_latam_manual_document_number
+            )
+            if not asks_code:
+                wizard.l10n_do_ecf_modification_code = False
+            elif wizard.refund_type in ("percentage", "fixed_amount"):
+                wizard.l10n_do_ecf_modification_code = "3"
+            else:
+                wizard.l10n_do_ecf_modification_code = "1"
 
     @api.depends("l10n_latam_document_type_id")
     def _compute_l10n_do_is_ecf_note(self):
