@@ -27,3 +27,14 @@ class TestSpanishLabels(TransactionCase):
         # the latam labels: es_ES had none at all
         self.assertEqual(self._label("account.move", "l10n_latam_document_type_id", "es_ES"), "Tipo de Comprobante")
         self.assertEqual(self._label("account.move", "l10n_latam_document_number", "es_ES"), "Comprobante Fiscal")
+
+    def test_header_buttons_in_spanish(self):
+        # core es.po (es_ES) says "Factura rectificativa"
+        self.env["res.lang"]._activate_lang("es_ES")
+        self.env["ir.module.module"]._load_module_terms(["account", "account_debit_note", "l10n_do_accounting"], ["es_ES"])
+        arch = self.env["account.move"].with_context(lang="es_ES").get_views([(False, "form")])["views"]["form"]["arch"]
+        credit = arch[arch.index('name="action_reverse"') - 200:arch.index('name="action_reverse"') + 300]
+        self.assertIn('string="Nota de crédito"', credit)
+        self.assertNotIn("rectificativa", credit)
+        debit = arch[arch.index('name="action_debit_note"') - 200:arch.index('name="action_debit_note"') + 300]
+        self.assertIn('string="Nota de débito"', debit)
