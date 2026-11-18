@@ -65,6 +65,18 @@ class AccountMoveReversal(models.TransientModel):
     is_ecf_invoice = fields.Boolean(
         string="Is Electronic Invoice",
     )
+    l10n_do_is_ecf_note = fields.Boolean(
+        compute="_compute_l10n_do_is_ecf_note",
+        help="Technical field: the note gets an electronic (e-CF) document "
+        "type, so it needs the e-CF modification code, also when the "
+        "supplier issued it and its number is typed by hand.",
+    )
+
+    @api.depends("l10n_latam_document_type_id")
+    def _compute_l10n_do_is_ecf_note(self):
+        for wizard in self:
+            ncf_type = wizard.l10n_latam_document_type_id.l10n_do_ncf_type or ""
+            wizard.l10n_do_is_ecf_note = ncf_type.startswith("e-")
 
     @api.depends(
         "l10n_latam_document_type_id", "country_code", "l10n_latam_use_documents"

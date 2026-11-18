@@ -15,6 +15,7 @@
             <field name="journal_id" position="after">
                 <field name="country_code" invisible="1"/>
                 <field name="is_ecf_invoice" invisible="1"/>
+                <field name="l10n_do_is_ecf_note" invisible="1"/>
             </field>
             <field name="l10n_latam_document_type_id" position="attributes">
                 <attribute name="invisible">(refund_action == 'draft_refund' and country_code != 'DO') or move_type == 'out_invoice'</attribute>
@@ -35,8 +36,11 @@
                        invisible="refund_type != 'percentage'" required="refund_type == 'percentage'"/>
                 <field name="amount"
                        invisible="refund_type != 'fixed_amount'" required="refund_type == 'fixed_amount'"/>
+                <!-- Also for an electronic supplier note (E34 typed by hand):
+                     its draft requires the code, so ask for it here -->
                 <field name="l10n_do_ecf_modification_code"
-                       invisible="(l10n_latam_manual_document_number == True or is_ecf_invoice == False)" required="l10n_latam_manual_document_number == False and is_ecf_invoice == True"/>
+                       invisible="not l10n_do_is_ecf_note and (l10n_latam_manual_document_number or not is_ecf_invoice)"
+                       required="l10n_do_is_ecf_note or (not l10n_latam_manual_document_number and is_ecf_invoice)"/>
             </field>
             <field name="date" position="after">
                 <group invisible="refund_type == 'full_refund'">
