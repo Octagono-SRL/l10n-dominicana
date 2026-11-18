@@ -18,198 +18,236 @@ msgstr ""
 "X-Generator: Poedit 3.4.2\n"
 
 #. module: l10n_do_accounting
+#: model_terms:ir.ui.view,arch_db:l10n_do_accounting.view_move_form
+msgid "Credit Note"
+msgstr "Nota de crédito"
+
+#. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/account_move.py:0
 #, python-format
 msgid "%s is not a stored field"
 msgstr "%s no es un campo almacenado"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/account_move.py:0
 #, python-format
 msgid "01 - Operational Incomes"
 msgstr "01 - Ingresos por Operaciones (No Financieros)"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/res_partner.py:0
 #, python-format
 msgid "01 - Personal"
 msgstr "01 - Gastos de Personal"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/account_move.py:0
 #, python-format
 msgid "01 - Pre-printed Invoice Impairment"
 msgstr "01 - Deterioro de Factura Pre-impresa"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/account_move.py:0
 #, python-format
 msgid "01 - Total Cancellation"
 msgstr "01 - Anulación total"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/account_move.py:0
 #, python-format
 msgid "02 - Financial Incomes"
 msgstr "02 - Ingresos Financieros"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/account_move.py:0
 #, python-format
 msgid "02 - Printing Errors (Pre-printed Invoice)"
 msgstr "02 - Errores de Impresión (Factura Pre-impresa)"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/account_move.py:0
 #, python-format
 msgid "02 - Text Correction"
 msgstr "02 - Corrección de Texto"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/res_partner.py:0
 #, python-format
 msgid "02 - Work, Supplies and Services"
 msgstr "02 - Gastos por Trabajo, Suministros y Servicio"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/account_move.py:0
 #, python-format
 msgid "03 - Amount correction"
 msgstr "03 - Corrección de Monto"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/account_move.py:0
 #, python-format
 msgid "03 - Defective Printing"
 msgstr "03 - Impresión Defectuosa"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/account_move.py:0
 #, python-format
 msgid "03 - Extraordinary Incomes"
 msgstr "03 - Ingresos Extraordinarios"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/res_partner.py:0
 #, python-format
 msgid "03 - Leasing"
 msgstr "03 - Arrendamientos"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/account_move.py:0
 #, python-format
 msgid "04 - Correction of Product Information"
 msgstr "04 - Corrección de la Información"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/res_partner.py:0
 #, python-format
 msgid "04 - Fixed Assets"
 msgstr "04 - Gastos de Activos Fijos"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/account_move.py:0
 #, python-format
 msgid "04 - Leasing Incomes"
 msgstr "04 - Ingresos por Arrendamientos"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/account_move.py:0
 #, python-format
 msgid "04 - NCF replacement issued in contingency"
 msgstr "04 - Reemplazo NCF emitido en contingencia"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/account_move.py:0
 #, python-format
 msgid "05 - Income for Selling Depreciable Assets"
 msgstr "05 - Ingresos por Venta de Activo Depreciable"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/account_move.py:0
 #, python-format
 msgid "05 - Product Change"
 msgstr "05 - Cambio de Productos"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/account_move.py:0
 #, python-format
 msgid "05 - Reference Electronic Consumer Invoice"
 msgstr "05 - Referencia Factura Consumo Electrónica"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/res_partner.py:0
 #, python-format
 msgid "05 - Representation"
 msgstr "05 - Gastos de Representación"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/res_partner.py:0
 #, python-format
 msgid "06 - Admitted Deductions"
 msgstr "06 - Otras Deducciones Admitidas"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/account_move.py:0
 #, python-format
 msgid "06 - Other Incomes"
 msgstr "06 - Otros Ingresos"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/account_move.py:0
 #, python-format
 msgid "06 - Product Return"
 msgstr "06 - Devolución de Productos"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/res_partner.py:0
 #, python-format
 msgid "07 - Financial Expenses"
 msgstr "07 - Gastos Financieros"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/account_move.py:0
 #, python-format
 msgid "07 - Product Omission"
 msgstr "07 - Omisión de Productos"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/res_partner.py:0
 #, python-format
 msgid "08 - Extraordinary Expenses"
 msgstr "08 - Gastos Extraordinarios"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/account_move.py:0
 #, python-format
 msgid "08 - NCF Sequence Errors"
 msgstr "08 - Errores en Secuencia de NCF"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/res_partner.py:0
 #, python-format
 msgid "09 - Cost & Expenses part of Sales"
 msgstr "09 - Compras y Gastos que forman parte del Costo de Venta"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/account_move.py:0
 #, python-format
 msgid "09 - For Cessation of Operations"
 msgstr "09 - Por Cese de Operaciones"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/res_partner.py:0
 #, python-format
 msgid "10 - Assets Acquisitions"
 msgstr "10 - Adquisiciones de Activos"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/account_move.py:0
 #, python-format
 msgid "10 - Lossing or Hurting Of Counterfoil"
 msgstr "10 - Pérdida o Hurto de Talonarios"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/res_partner.py:0
 #, python-format
 msgid "11 - Insurance Expenses"
@@ -301,6 +339,7 @@ msgid "<strong>Vence:</strong>"
 msgstr ""
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/account_move.py:0
 #, python-format
 msgid "A VAT is mandatory for this type of NCF. Please set the current VAT of this client"
@@ -334,6 +373,7 @@ msgid "Add Debit Note wizard"
 msgstr "Asistente para agregar nota débito"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/wizard/account_debit_note.py:0
 #: code:addons/l10n_do_accounting/wizard/account_move_reversal.py:0
 #: model:ir.model.fields,field_description:l10n_do_accounting.field_account_debit_note__l10n_do_amount
@@ -354,12 +394,14 @@ msgstr ""
 "move, podría ser relativo a otros modelos, como por ejemplo stock.picking)"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/wizard/account_debit_note.py:0
 #, python-format
 msgid "Apply debit"
 msgstr "Aplicar débito"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/account_journal.py:0
 #, python-format
 msgid "Bonds or Gift Certificate"
@@ -424,18 +466,21 @@ msgid "Cancellation Type"
 msgstr "Tipo de anulación"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/account_journal.py:0
 #, python-format
 msgid "Cannot create chart of account until you configure your VAT."
 msgstr "No puede crear un Catálogo de Cuentas hasta no establecer su RNC."
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/account_journal.py:0
 #, python-format
 msgid "Cash"
 msgstr "Efectivo"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/account_journal.py:0
 #, python-format
 msgid "Check / Transfer"
@@ -506,12 +551,14 @@ msgid "Created on"
 msgstr "Creado el"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/account_journal.py:0
 #, python-format
 msgid "Credit"
 msgstr "Crédito"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/account_journal.py:0
 #, python-format
 msgid "Credit Card"
@@ -614,6 +661,7 @@ msgid "Dominican Localization"
 msgstr "Localización dominicana"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/wizard/account_debit_note.py:0
 #, python-format
 msgid "Draft debit"
@@ -670,48 +718,56 @@ msgid "Fiscal Number"
 msgstr "Número de Comprobante Fiscal"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/res_partner.py:0
 #, python-format
 msgid "Fiscal Tax Payer"
 msgstr "Contribuyente"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/account_move.py:0
 #, python-format
 msgid "Fiscal invoice cannot be posted with amount zero."
 msgstr "Las facturas fiscales no pueden ser Confirmadas con monto cero."
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/account_move.py:0
 #, python-format
 msgid "Fiscal invoices require partner fiscal type"
 msgstr "Las Facturas Fiscales requieren un Tipo de Contribuyente en el contacto"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/wizard/account_resequence.py:0
 #, python-format
 msgid "Fiscal invoices resequence is not allowed."
 msgstr "La secuenciación de Facturas Fiscales no está permitido"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/res_partner.py:0
 #, python-format
 msgid "Foreigner"
 msgstr "Extranjero"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/wizard/account_move_reversal.py:0
 #, python-format
 msgid "Full Refund"
 msgstr "Reembolso completo"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/account_journal.py:0
 #, python-format
 msgid "Go to Companies"
 msgstr "Ir a Compañías"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/res_partner.py:0
 #, python-format
 msgid "Governmental"
@@ -883,6 +939,7 @@ msgid "Monto Gravado"
 msgstr ""
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/l10n_latam_document_type.py:0
 #, python-format
 msgid "NCF %s doesn't have the correct structure"
@@ -920,6 +977,7 @@ msgid "NCF:"
 msgstr ""
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/wizard/account_debit_note.py:0
 #, python-format
 msgid "No invoice found for this operation"
@@ -931,12 +989,14 @@ msgid "Nombre:"
 msgstr ""
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/res_partner.py:0
 #, python-format
 msgid "Non Tax Payer"
 msgstr "Cliente de Consumo"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/res_partner.py:0
 #, python-format
 msgid "Nonprofit Organization"
@@ -970,18 +1030,21 @@ msgstr ""
 "Facturas Electrónicas. La emisión de NCF ha sido habilitada."
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/account_journal.py:0
 #, python-format
 msgid "Other Sale Type"
 msgstr "Otras Formas de Venta"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/wizard/account_move_reversal.py:0
 #, python-format
 msgid "Partial Refund"
 msgstr "Reembolso Parcial"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/account_journal.py:0
 #, python-format
 msgid "Partner (%s) %s is needed to issue a fiscal invoice"
@@ -993,6 +1056,7 @@ msgid "Payment Form"
 msgstr "Forma de Pago"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/wizard/account_debit_note.py:0
 #: code:addons/l10n_do_accounting/wizard/account_move_reversal.py:0
 #: model:ir.model.fields,field_description:l10n_do_accounting.field_account_debit_note__l10n_do_percentage
@@ -1017,6 +1081,7 @@ msgid "Record a new vendor debit note"
 msgstr "Registrar una nueva Nota de Débito del proveedor"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/wizard/account_move_reversal.py:0
 #, python-format
 msgid "Refund"
@@ -1038,6 +1103,7 @@ msgid "Remake the sequence of Journal Entries."
 msgstr "Haz de nuevo la secuencia de asientos de diario."
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/wizard/account_move_cancel.py:0
 #, python-format
 msgid "Selected invoice(s) cannot be cancelled as they are already in 'Cancelled' state."
@@ -1046,6 +1112,7 @@ msgstr ""
 "Cancelado."
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/wizard/account_move_cancel.py:0
 #, python-format
 msgid "Selected invoice(s) cannot be cancelled as they are already in 'Paid' state."
@@ -1072,6 +1139,7 @@ msgid "Supplier Credit Note"
 msgstr "Nota de Crédito de Proveedor"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: model_terms:ir.ui.view,arch_db:l10n_do_accounting.view_move_form
 #: code:addons/l10n_do_accounting/wizard/account_debit_note.py:0
 #, python-format
@@ -1089,6 +1157,7 @@ msgid "Supplier Invoices"
 msgstr "Facturas de Proveedor"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/account_journal.py:0
 #, python-format
 msgid "Swap"
@@ -1130,6 +1199,7 @@ msgid "Technical field used to hide/show fields regarding the localization"
 msgstr "Campo técnico usado para mostrar/ocultar campos dependiendo la localización"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/account_move.py:0
 #, python-format
 msgid "There is already a sale invoice with fiscal number %s"
@@ -1182,6 +1252,7 @@ msgid "Vendor Debit Notes"
 msgstr "Notas de Débito de Proveedor"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/account_move.py:0
 #, python-format
 msgid "Vendor bill Fiscal Number must be unique per vendor and company."
@@ -1199,24 +1270,28 @@ msgid "When activating this field, NCF issuance is disabled."
 msgstr "Cuando este campo es activado, la emisión de NCF es deshabilitada."
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/account_move.py:0
 #, python-format
 msgid "You are not allowed to cancel Fiscal Invoices"
 msgstr "No tiene permitido cancelar Facturas Fiscales"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/wizard/account_debit_note.py:0
 #, python-format
 msgid "You are not allowed to issue Debit Notes"
 msgstr "No tiene permitido emitir Notas de Débito"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/account_move.py:0
 #, python-format
 msgid "You are not allowed to issue Fiscal Credit Notes"
 msgstr "No tiene permitido emitir Notas de Crédito Fiscales"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/res_partner.py:0
 #, python-format
 msgid "You are not allowed to modify %s after partner fiscal document issuing"
@@ -1225,6 +1300,7 @@ msgstr ""
 "de este contacto"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/wizard/account_move_reversal.py:0
 #, python-format
 msgid ""
@@ -1236,30 +1312,35 @@ msgstr ""
 "Documentos señalados: %s"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/account_move.py:0
 #, python-format
 msgid "You cannot cancel multiple fiscal invoices at a time."
 msgstr "No puede cancelar múltiples facturas fiscales a la vez."
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/wizard/account_move_reversal.py:0
 #, python-format
 msgid "You cannot create Credit Notes from multiple documents at a time."
 msgstr "No puede crear Notas de Crédito desde múltiples documentos a la vez."
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/wizard/account_debit_note.py:0
 #, python-format
 msgid "You cannot create Debit Notes from multiple documents at a time."
 msgstr "No puede crear Notas de Débito desde múltiples facturas a la vez."
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/account_move.py:0
 #, python-format
 msgid "You cannot delete fiscal invoice which have been posted before"
 msgstr "No puede eliminar una factura fiscal que ha sido validada anteriormente"
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/wizard/account_debit_note.py:0
 #, python-format
 msgid "You cannot issue Credit/Debit Notes for %s document type"
@@ -1312,6 +1393,7 @@ msgid "e-NCF:"
 msgstr ""
 
 #. module: l10n_do_accounting
+#. odoo-python
 #: code:addons/l10n_do_accounting/models/res_partner.py:0
 #, python-format
 msgid "special from Tax Paying"
