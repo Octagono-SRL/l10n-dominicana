@@ -43,17 +43,19 @@
                        required="l10n_do_is_ecf_note or (not l10n_latam_manual_document_number and is_ecf_invoice)"/>
             </field>
             <field name="date" position="after">
-                <group invisible="refund_type == 'full_refund'">
-                    <div invisible="refund_action != 'draft_refund'" class="oe_grey" colspan="4">
+                <!-- a div, not a group: a group nested in this field group turns it
+                     into a group of columns and every field loses its label -->
+                <div invisible="refund_type == 'full_refund'" colspan="2">
+                    <div invisible="refund_action != 'draft_refund'" class="oe_grey">
                         You will be able to edit and validate this
                         credit note directly or keep it draft.
                      </div>
-                    <div invisible="refund_action != 'apply_refund'" class="oe_grey" colspan="4">
+                    <div invisible="refund_action != 'apply_refund'" class="oe_grey">
                         Use this option if you want to fully apply a credit note.
                         The credit note will be created, validated and reconciled
                         with the invoice. You will not be able to modify the credit note.
                      </div>
-                </group>
+                </div>
             </field>
         </field>
     </record>
