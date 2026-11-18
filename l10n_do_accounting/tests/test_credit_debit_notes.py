@@ -448,6 +448,61 @@ class TestCreditDebitNotes(L10nDOTestsCommon):
         )
         self.assertEqual(debit.l10n_do_origin_ncf, bill.l10n_do_fiscal_number)
 
+    # Vendor notes: an electronic supplier note (E34 / E33) asks for the
+    # e-CF modification code in the wizard, as customer notes do, instead
+    # of leaving it empty for the draft to ask again.
+
+    def _doc(self, prefix):
+        return self.env["l10n_latam.document.type"].search(
+            [("doc_code_prefix", "=", prefix), ("country_id.code", "=", "DO")],
+            limit=1,
+        )
+
+    def _vendor_ecf_bill(self):
+        return self._invoice(move_type="in_invoice", number=77, doc=self._doc("E31"))
+
+    def test_vendor_ecf_credit_note_asks_code(self):
+        bill = self._vendor_ecf_bill()
+        form = Form(
+            self.env["account.move.reversal"].with_context(
+                active_model="account.move", active_ids=bill.ids
+            )
+        )
+        form.reason = "Devolucion"
+        form.l10n_latam_document_type_id = self._doc("E34")
+        form.l10n_latam_document_number = "E340000000012"
+        form.l10n_do_ecf_modification_code = "3"
+        refund = self._open(form.save().refund_moves())
+        self.assertEqual(refund.move_type, "in_refund")
+        self.assertEqual(refund.l10n_latam_document_type_id.doc_code_prefix, "E34")
+        self.assertEqual(refund.l10n_do_ecf_modification_code, "3")
+        self.assertEqual(refund.l10n_do_origin_ncf, bill.l10n_do_fiscal_number)
+
+    def test_vendor_paper_credit_note_no_code(self):
+        bill = self._invoice(move_type="in_invoice", number=77)
+        wizard = self._reversal(bill, l10n_latam_document_type_id=self._doc("B04").id)
+        self.assertFalse(wizard.l10n_do_is_ecf_note)
+        wizard.l10n_latam_document_type_id = self._doc("E34")
+        self.assertTrue(wizard.l10n_do_is_ecf_note)
+
+    def test_vendor_ecf_debit_note_asks_code(self):
+        bill = self._vendor_ecf_bill()
+        form = Form(
+            self.env["account.debit.note"].with_context(
+                active_model="account.move", active_ids=bill.ids
+            )
+        )
+        form.reason = "Cargo adicional"
+        form.l10n_latam_document_type_id = self._doc("E33")
+        form.l10n_latam_document_number = "E330000000005"
+        form.l10n_do_percentage = 10
+        form.l10n_do_ecf_modification_code = "3"
+        debit = self._open(form.save().create_debit())
+        self.assertEqual(debit.move_type, "in_invoice")
+        self.assertEqual(debit.l10n_latam_document_type_id.doc_code_prefix, "E33")
+        self.assertEqual(debit.l10n_do_ecf_modification_code, "3")
+        self.assertEqual(debit.l10n_do_origin_ncf, bill.l10n_do_fiscal_number)
+
     # A3: Debit Note button next to Credit Note
 
     def test_debit_note_button(self):
