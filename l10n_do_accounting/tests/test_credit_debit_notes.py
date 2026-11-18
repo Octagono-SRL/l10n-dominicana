@@ -125,6 +125,17 @@ class TestCreditDebitNotes(L10nDOTestsCommon):
 
     # A4: origin NCF and modification code on every credit note
 
+    def test_wizard_fields_keep_their_labels(self):
+        # A <group> nested in the field group (14 layout) made Odoo 17+ render
+        # it as a group of columns: Motivo, Diario, Fecha, the e-CF code... all
+        # without labels.
+        from lxml import etree
+
+        arch = self.env["account.move.reversal"].get_views([(False, "form")])["views"]["form"]["arch"]
+        group = etree.fromstring(arch).xpath("//group[field[@name='reason']]")[0]
+        self.assertFalse(group.xpath("./group"))
+        self.assertTrue(group.xpath("./field[@name='l10n_do_ecf_modification_code']"))
+
     def test_full_credit_note_origin_and_code(self):
         invoice = self._invoice()
         refund = self._open(
