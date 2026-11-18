@@ -5,6 +5,12 @@
         <field name="model">account.move</field>
         <field name="inherit_id" ref="account.view_move_form"/>
         <field name="arch" type="xml">
+            <!-- Core es.po (loaded for es_ES users) calls this button "Factura
+                 rectificativa"; Dominican users know it as Nota de credito
+                 (this module's es.po), next to Nota de debito -->
+            <xpath expr="//button[@name='action_reverse']" position="attributes">
+                <attribute name="string">Credit Note</attribute>
+            </xpath>
             <field name="restrict_mode_hash_table" position="after">
                 <field name="is_ecf_invoice" invisible="1"/>
                 <field name="l10n_do_company_in_contingency" invisible="1"/>

@@ -552,6 +552,30 @@ class TestCreditDebitNotes(L10nDOTestsCommon):
         self.assertEqual(debit.l10n_do_ecf_modification_code, "3")
         self.assertEqual(debit.l10n_do_origin_ncf, bill.l10n_do_fiscal_number)
 
+    # Printed e-CF: the QR (Odoo 15+ calls the /report/barcode parameter
+    # "barcode_type"; with Odoo 14's "type" the image answered HTTP 500)
+
+    def test_printed_ecf_has_qr(self):
+        invoice = self._invoice()
+        invoice.is_ecf_invoice = True  # stored compute, only refreshed on drafts
+        invoice.write(
+            {
+                "l10n_do_ecf_security_code": "ABC123",
+                "l10n_do_ecf_sign_date": fields.Datetime.now(),
+            }
+        )
+        self.assertTrue(invoice.l10n_do_electronic_stamp)
+        html = self.env["ir.actions.report"]._render_qweb_html(
+            "account.report_invoice", invoice.ids
+        )[0].decode()
+        self.assertIn("/report/barcode/?barcode_type=QR&amp;", html)
+        self.assertNotIn("/report/barcode/?type=", html)
+        self.assertTrue(
+            self.env["ir.actions.report"].barcode(
+                "QR", "https://ecf.dgii.gov.do/testecf/consultatimbre?rncemisor=1"
+            )
+        )
+
     # A3: Debit Note button next to Credit Note
 
     def test_debit_note_button(self):
