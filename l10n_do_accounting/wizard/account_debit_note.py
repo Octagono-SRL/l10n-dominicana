@@ -59,6 +59,9 @@ class AccountDebitNote(models.TransientModel):
             "account.move"
         ]._get_l10n_do_ecf_modification_code(),
         string="e-CF Modification Code",
+        compute="_compute_l10n_do_ecf_modification_code",
+        store=True,
+        readonly=False,
         copy=False,
     )
     is_ecf_invoice = fields.Boolean(
@@ -74,6 +77,24 @@ class AccountDebitNote(models.TransientModel):
     l10n_latam_document_type_id = fields.Many2one(
         "l10n_latam.document.type", "Document Type", ondelete="cascade"
     )
+
+    @api.depends(
+        "l10n_latam_document_type_id", "move_type", "is_ecf_invoice"
+    )
+    def _compute_l10n_do_ecf_modification_code(self):
+        """Prefill 03 Amount correction on e-CF debit notes, customer or
+        supplier (the user can still change it, a code already chosen is
+        kept)."""
+        for wizard in self:
+            ncf_type = wizard.l10n_latam_document_type_id.l10n_do_ncf_type or ""
+            asks_code = ncf_type.startswith("e-") or (
+                wizard.move_type in ("out_invoice", "out_refund")
+                and wizard.is_ecf_invoice
+            )
+            if not asks_code:
+                wizard.l10n_do_ecf_modification_code = False
+            elif not wizard.l10n_do_ecf_modification_code:
+                wizard.l10n_do_ecf_modification_code = "3"
 
     @api.depends("l10n_latam_document_type_id")
     def _compute_l10n_do_is_ecf_note(self):

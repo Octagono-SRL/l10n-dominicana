@@ -482,8 +482,57 @@ class TestCreditDebitNotes(L10nDOTestsCommon):
         bill = self._invoice(move_type="in_invoice", number=77)
         wizard = self._reversal(bill, l10n_latam_document_type_id=self._doc("B04").id)
         self.assertFalse(wizard.l10n_do_is_ecf_note)
+        self.assertFalse(wizard.l10n_do_ecf_modification_code)
         wizard.l10n_latam_document_type_id = self._doc("E34")
         self.assertTrue(wizard.l10n_do_is_ecf_note)
+        self.assertEqual(wizard.l10n_do_ecf_modification_code, "1")
+
+    def test_modification_code_prefilled(self):
+        """The code comes filled, the user only changes it if needed:
+        01 for a full refund, 03 for Percentage/Amount and debit notes."""
+        bill = self._vendor_ecf_bill()
+        form = Form(
+            self.env["account.move.reversal"].with_context(
+                active_model="account.move", active_ids=bill.ids
+            )
+        )
+        form.reason = "Devolucion"
+        form.l10n_latam_document_type_id = self._doc("E34")
+        self.assertEqual(form.l10n_do_ecf_modification_code, "1")
+        form.refund_type = "percentage"
+        self.assertEqual(form.l10n_do_ecf_modification_code, "3")
+        form.refund_type = "full_refund"
+        self.assertEqual(form.l10n_do_ecf_modification_code, "1")
+        form.l10n_latam_document_number = "E340000000013"
+        refund = self._open(form.save().refund_moves())
+        self.assertEqual(refund.l10n_do_ecf_modification_code, "1")
+
+        form = Form(
+            self.env["account.debit.note"].with_context(
+                active_model="account.move", active_ids=bill.ids
+            )
+        )
+        form.reason = "Cargo adicional"
+        form.l10n_latam_document_type_id = self._doc("E33")
+        form.l10n_latam_document_number = "E330000000006"
+        form.l10n_do_percentage = 10
+        self.assertEqual(form.l10n_do_ecf_modification_code, "3")
+        debit = self._open(form.save().create_debit())
+        self.assertEqual(debit.l10n_do_ecf_modification_code, "3")
+
+        invoice = self._invoice()
+        refund = self._open(self._reversal(invoice).refund_moves())
+        self.assertEqual(refund.l10n_do_ecf_modification_code, "1")
+        refund = self._open(
+            self._reversal(invoice, refund_type="fixed_amount", amount=100).refund_moves()
+        )
+        self.assertEqual(refund.l10n_do_ecf_modification_code, "3")
+        debit = self._open(self._debit_wizard(invoice, l10n_do_percentage=5).create_debit())
+        self.assertEqual(debit.l10n_do_ecf_modification_code, "3")
+        wizard = self._debit_wizard(
+            invoice, l10n_do_percentage=5, l10n_do_ecf_modification_code="2"
+        )
+        self.assertEqual(wizard.l10n_do_ecf_modification_code, "2")
 
     def test_vendor_ecf_debit_note_asks_code(self):
         bill = self._vendor_ecf_bill()
