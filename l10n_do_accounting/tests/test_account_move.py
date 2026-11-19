@@ -438,7 +438,7 @@ class AccountMoveTest(common.L10nDOTestsCommon):
                     "journal_id": ecf_purchase_credito_fiscal_invoice.journal_id.id,
                     "refund_type": "percentage",
                     "percentage": "5",
-                    "l10n_latam_document_number": "B0400000001",
+                    "l10n_latam_document_number": "E340000000001",  # E31 origin -> E34 by default
                 }
             )
         )
