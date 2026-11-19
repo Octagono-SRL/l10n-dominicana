@@ -78,20 +78,17 @@ class AccountDebitNote(models.TransientModel):
         "l10n_latam.document.type", "Document Type", ondelete="cascade"
     )
 
-    @api.depends(
-        "l10n_latam_document_type_id", "move_type", "is_ecf_invoice"
-    )
+    @api.depends("l10n_latam_country_code", "l10n_latam_use_documents")
     def _compute_l10n_do_ecf_modification_code(self):
         """Prefill 03 Amount correction on e-CF debit notes, customer or
         supplier (the user can still change it, a code already chosen is
         kept)."""
         for wizard in self:
-            ncf_type = wizard.l10n_latam_document_type_id.l10n_do_ncf_type or ""
-            asks_code = ncf_type.startswith("e-") or (
-                wizard.move_type in ("out_invoice", "out_refund")
-                and wizard.is_ecf_invoice
-            )
-            if not asks_code:
+            # always shown on Dominican fiscal notes, required when electronic
+            if not (
+                wizard.l10n_latam_country_code == "DO"
+                and wizard.l10n_latam_use_documents
+            ):
                 wizard.l10n_do_ecf_modification_code = False
             elif not wizard.l10n_do_ecf_modification_code:
                 wizard.l10n_do_ecf_modification_code = "3"
@@ -177,7 +174,11 @@ class AccountDebitNote(models.TransientModel):
                 .search(move._get_l10n_latam_documents_domain())
                 .ids
             )
-            self.l10n_latam_document_type_id = domain_ids[0]
+            # the debit note follows the invoice it modifies: E33 for an
+            # e-CF, B03 for a paper one (the first type of the list otherwise)
+            self.l10n_latam_document_type_id = move_id._l10n_do_note_document_type(
+                self.env["l10n_latam.document.type"].browse(domain_ids)
+            ) or domain_ids[0]
             return {
                 "domain": {
                     "l10n_latam_document_type_id": [
