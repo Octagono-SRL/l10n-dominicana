@@ -49,10 +49,10 @@
                 <field name="l10n_do_account_id" groups="account.group_account_user"
                        options='{"no_open": True, "no_create": True}'
                        invisible="(l10n_latam_country_code != 'DO' or copy_lines)" required="l10n_latam_country_code == 'DO' and not copy_lines"/>
-                <!-- Every electronic debit note (E33), also a supplier one typed
-                     by hand: its draft requires the code, so ask for it here -->
+                <!-- Always shown on Dominican fiscal notes, also a supplier E33
+                     typed by hand; required when the note is electronic -->
                 <field name="l10n_do_ecf_modification_code"
-                       invisible="l10n_latam_country_code != 'DO' or not (l10n_do_is_ecf_note or (move_type in ('out_invoice', 'out_refund') and is_ecf_invoice))"
+                       invisible="l10n_latam_country_code != 'DO' or not l10n_latam_use_documents"
                        required="l10n_latam_country_code == 'DO' and (l10n_do_is_ecf_note or (move_type in ('out_invoice', 'out_refund') and is_ecf_invoice))"/>
             </field>
             <xpath expr="//field[@name='copy_lines']" position="attributes">

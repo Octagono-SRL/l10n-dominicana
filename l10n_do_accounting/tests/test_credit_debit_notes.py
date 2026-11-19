@@ -489,14 +489,41 @@ class TestCreditDebitNotes(L10nDOTestsCommon):
         self.assertEqual(refund.l10n_do_ecf_modification_code, "3")
         self.assertEqual(refund.l10n_do_origin_ncf, bill.l10n_do_fiscal_number)
 
-    def test_vendor_paper_credit_note_no_code(self):
-        bill = self._invoice(move_type="in_invoice", number=77)
-        wizard = self._reversal(bill, l10n_latam_document_type_id=self._doc("B04").id)
-        self.assertFalse(wizard.l10n_do_is_ecf_note)
-        self.assertFalse(wizard.l10n_do_ecf_modification_code)
-        wizard.l10n_latam_document_type_id = self._doc("E34")
-        self.assertTrue(wizard.l10n_do_is_ecf_note)
-        self.assertEqual(wizard.l10n_do_ecf_modification_code, "1")
+    def _reversal_form(self, move):
+        return Form(
+            self.env["account.move.reversal"].with_context(
+                active_model="account.move", active_ids=move.ids
+            )
+        )
+
+    def _debit_form(self, move):
+        return Form(
+            self.env["account.debit.note"].with_context(
+                active_model="account.move", active_ids=move.ids
+            )
+        )
+
+    def test_note_type_follows_the_invoice(self):
+        # Marlan 2026-11-19: a credit note of an electronic invoice came as
+        # B04 (first type of the list) and the code only showed after
+        # choosing E34 by hand.
+        ecf_bill = self._vendor_ecf_bill()
+        form = self._reversal_form(ecf_bill)
+        self.assertEqual(form.l10n_latam_document_type_id, self._doc("E34"))
+        self.assertFalse(form._get_modifier("l10n_do_ecf_modification_code", "invisible"))
+        self.assertTrue(form._get_modifier("l10n_do_ecf_modification_code", "required"))
+        self.assertEqual(form.l10n_do_ecf_modification_code, "1")
+        self.assertEqual(self._debit_form(ecf_bill).l10n_latam_document_type_id, self._doc("E33"))
+
+        paper_bill = self._invoice(move_type="in_invoice", number=78, doc=self._doc("B01"))
+        form = self._reversal_form(paper_bill)
+        self.assertEqual(form.l10n_latam_document_type_id, self._doc("B04"))
+        # always shown, required only for an electronic note
+        self.assertFalse(form._get_modifier("l10n_do_ecf_modification_code", "invisible"))
+        self.assertFalse(form._get_modifier("l10n_do_ecf_modification_code", "required"))
+        form.l10n_latam_document_type_id = self._doc("E34")
+        self.assertTrue(form._get_modifier("l10n_do_ecf_modification_code", "required"))
+        self.assertEqual(self._debit_form(paper_bill).l10n_latam_document_type_id, self._doc("B03"))
 
     def test_modification_code_prefilled(self):
         """The code comes filled, the user only changes it if needed:

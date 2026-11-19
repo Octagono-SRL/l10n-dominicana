@@ -75,22 +75,15 @@ class AccountMoveReversal(models.TransientModel):
         "supplier issued it and its number is typed by hand.",
     )
 
-    @api.depends(
-        "refund_type",
-        "l10n_latam_document_type_id",
-        "is_ecf_invoice",
-        "l10n_latam_manual_document_number",
-    )
+    @api.depends("refund_type", "country_code", "move_ids", "l10n_latam_use_documents")
     def _compute_l10n_do_ecf_modification_code(self):
         """Prefill the code an e-CF note needs (the user can still change
         it): 01 Total Cancellation for a full refund, 03 Amount correction
         for Percentage/Amount, as the Miramar POS refunds do."""
         for wizard in self:
-            ncf_type = wizard.l10n_latam_document_type_id.l10n_do_ncf_type or ""
-            asks_code = ncf_type.startswith("e-") or (
-                wizard.is_ecf_invoice and not wizard.l10n_latam_manual_document_number
-            )
-            if not asks_code:
+            # always shown on Dominican fiscal notes, required when electronic
+            country = wizard.country_code or wizard.move_ids[:1].company_id.country_code
+            if not (country == "DO" and wizard.l10n_latam_use_documents):
                 wizard.l10n_do_ecf_modification_code = False
             elif wizard.refund_type in ("percentage", "fixed_amount"):
                 wizard.l10n_do_ecf_modification_code = "3"
@@ -318,8 +311,17 @@ class AccountMoveReversal(models.TransientModel):
                         "company_id": record.move_ids.company_id.id,
                     }
                 )
-                record.l10n_latam_document_type_id = refund.l10n_latam_document_type_id
                 record.l10n_latam_available_document_type_ids = (
                     refund.l10n_latam_available_document_type_ids
+                )
+                # the credit note follows the invoice it modifies: E34 for an
+                # e-CF, B04 for a paper NCF (the first type of the list is a
+                # B04 even for an e-CF)
+                record.l10n_latam_document_type_id = (
+                    record.move_ids._origin[:1]._l10n_do_note_document_type(
+                        refund.l10n_latam_available_document_type_ids,
+                        refund.l10n_latam_document_type_id,
+                    )
+                    or refund.l10n_latam_document_type_id
                 )
         super(AccountMoveReversal, self - do_wizard)._compute_document_type()

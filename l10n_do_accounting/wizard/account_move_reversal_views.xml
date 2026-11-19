@@ -36,10 +36,10 @@
                        invisible="refund_type != 'percentage'" required="refund_type == 'percentage'"/>
                 <field name="amount"
                        invisible="refund_type != 'fixed_amount'" required="refund_type == 'fixed_amount'"/>
-                <!-- Also for an electronic supplier note (E34 typed by hand):
-                     its draft requires the code, so ask for it here -->
+                <!-- Always shown on Dominican fiscal notes, also a supplier E34
+                     typed by hand; required when the note is electronic -->
                 <field name="l10n_do_ecf_modification_code"
-                       invisible="not l10n_do_is_ecf_note and (l10n_latam_manual_document_number or not is_ecf_invoice)"
+                       invisible="country_code != 'DO' or not l10n_latam_use_documents"
                        required="l10n_do_is_ecf_note or (not l10n_latam_manual_document_number and is_ecf_invoice)"/>
             </field>
             <field name="date" position="after">

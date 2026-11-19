@@ -745,6 +745,24 @@ class AccountMove(models.Model):
             "e-exterior",
         )
 
+    def _l10n_do_note_document_type(self, available, current=None):
+        """Document type of a credit/debit note of this invoice: electronic
+        (E34/E33) for an e-CF, paper (B04/B03) for a paper NCF. Returns
+        `current` when it already matches, an empty record when nothing
+        does (the caller keeps its default)."""
+        self.ensure_one()
+        origin_type = self.l10n_latam_document_type_id.l10n_do_ncf_type
+        if not origin_type:
+            return current or available.browse()
+        electronic = origin_type.startswith("e-")
+
+        def matches(doc):
+            return doc and (doc.l10n_do_ncf_type or "").startswith("e-") == electronic
+
+        if current and matches(current):
+            return current
+        return available.filtered(matches)[:1]
+
     def _get_debit_line_tax(self, debit_date):
         """Tax of a Percentage/Amount debit note line (same rule as 14).
 
