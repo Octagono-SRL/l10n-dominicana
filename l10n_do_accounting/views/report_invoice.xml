@@ -166,8 +166,11 @@
              by tax_groups_totals_do_inherited below instead. -->
 
         <xpath expr="//div[@id='total']/.." position="after">
-            <div class="row">
-                <div class="col-6" style="display: inline-block; float: left; font-size:11px;">
+            <!-- Plain columns: wkhtmltopdf does not draw a row whose columns also
+                 float, so the QR, security code and sign date never reached the PDF.
+                 clear: keeps the block under the totals, which float right. -->
+            <div class="row clearfix" style="clear: both;">
+                <div class="col-6" style="font-size:11px;">
                     <t t-if="o.l10n_do_electronic_stamp">
                         <div>
                             <img t-att-src="'/report/barcode/?barcode_type=QR&amp;width=100&amp;height=100&amp;value=' + o.l10n_do_electronic_stamp if o.l10n_do_electronic_stamp else ''"/>
@@ -183,7 +186,7 @@
                         </t>
                     </t>
                 </div>
-                <div t-if="is_l10n_do_invoice" class="text-muted text-end col-6" style="float: right;">
+                <div t-if="is_l10n_do_invoice" class="text-muted text-end col-6">
                     <span>
                         <strong>Original:</strong>
                         Cliente
