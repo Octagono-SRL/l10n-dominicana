@@ -289,7 +289,7 @@
             <attribute name="t-if">not is_l10n_do_invoice</attribute>
         </xpath>
         <xpath expr="//tr[hasclass('o_total')]/td[2]/span" position="after">
-            <t t-set="l10n_do_amount_total" t-value="l10n_do_amounts['l10n_do_invoice_total']"/>
+            <t t-set="l10n_do_amount_total" t-value="l10n_do_amounts['l10n_do_invoice_total']" t-if="is_l10n_do_invoice"/>
             <span t-if="is_l10n_do_invoice" class="text-nowrap" t-esc="l10n_do_amount_total"
                   t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
         </xpath>
