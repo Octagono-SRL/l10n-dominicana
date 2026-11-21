@@ -267,10 +267,18 @@ class AccountMove(models.Model):
         real historic invoices), but its ir.model.data xmlid mapping does
         not -- reproduced live, right here. Falling back to a name search
         keeps this working regardless of that xmlid's migration state.
+
+        Tax groups belong to a company since 17.0, so the group must be the
+        one of the invoice's company: with several companies, a name search
+        without the company returned the first company's group and every
+        other company's ITBIS/ISR amounts came out as zero.
         """
+        company = self.company_id or self.env.company
         group = self.env.ref(xmlid, raise_if_not_found=False)
-        if not group:
-            group = self.env["account.tax.group"].search([("name", "=", name)], limit=1)
+        if not group or group.company_id != company:
+            group = self.env["account.tax.group"].search(
+                [("name", "=", name), ("company_id", "=", company.id)], limit=1
+            )
         return group
 
     def _get_tax_line_ids(self):

@@ -39,10 +39,8 @@ class AccountMoveLine(models.Model):
             # just be self.env.ref("l10n_do.tax_group_itbis") -- that
             # xmlid isn't guaranteed to survive an OpenUpgrade migration
             # even though the underlying account.tax.group row does.
-            itbis_group = self.env.ref(
-                "l10n_do.tax_group_itbis", raise_if_not_found=False
-            ) or self.env["account.tax.group"].search(
-                [("name", "=", "ITBIS")], limit=1
+            itbis_group = self.move_id._l10n_do_tax_group(
+                "l10n_do.tax_group_itbis", "ITBIS"
             )
             line_itbis_taxes = self.tax_ids.filtered(
                 lambda t: t.tax_group_id == itbis_group
