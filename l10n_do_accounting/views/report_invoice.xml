@@ -160,7 +160,9 @@
                 <div class="col-6" style="font-size:11px;">
                     <t t-if="o.l10n_do_electronic_stamp">
                         <div>
-                            <img t-att-src="'/report/barcode/?barcode_type=QR&amp;width=100&amp;height=100&amp;value=' + o.l10n_do_electronic_stamp if o.l10n_do_electronic_stamp else ''"/>
+                            <!-- 300 px drawn at 100 px: the DGII URL makes a dense QR that a
+                                 100 px image can't hold (unreadable once printed). -->
+                            <img t-att-src="'/report/barcode/?barcode_type=QR&amp;width=300&amp;height=300&amp;value=' + o.l10n_do_electronic_stamp if o.l10n_do_electronic_stamp else ''" style="width: 100px; height: 100px;"/>
                         </div>
                         <t t-if="o.l10n_do_ecf_security_code">
                             <strong>Código de Seguridad:</strong>
