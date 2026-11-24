@@ -169,11 +169,13 @@ class AccountMoveTest(common.L10nDOTestsCommon):
             ncf_purchase_credito_fiscal_invoice.l10n_latam_available_document_type_ids,
             self.env["l10n_latam.document.type"].browse(
                 (
-                    self.do_document_type["fiscal"] + self.do_document_type["e-fiscal"]
+                    self.do_document_type["fiscal"]
+                    + self.do_document_type["e-fiscal"]
+                    + self.do_document_type["minor"]
                 ).ids
             ),
-            "Tax Payer invoice must have only Credito Fiscal as available "
-            "document type",
+            "Tax Payer bill must have Credito Fiscal and, issued by the company "
+            "itself, Gasto Menor (paper: company is not an e-CF issuer)",
         )
 
         # Credit Note
@@ -418,11 +420,13 @@ class AccountMoveTest(common.L10nDOTestsCommon):
             ecf_purchase_credito_fiscal_invoice.l10n_latam_available_document_type_ids,
             self.env["l10n_latam.document.type"].browse(
                 (
-                    self.do_document_type["fiscal"] + self.do_document_type["e-fiscal"]
+                    self.do_document_type["fiscal"]
+                    + self.do_document_type["e-fiscal"]
+                    + self.do_document_type["e-minor"]
                 ).ids
             ),
-            "Tax Payer invoice must have only Credito Fiscal as available "
-            "document type",
+            "Tax Payer bill must have Credito Fiscal and, issued by the company "
+            "itself, Gasto Menor Electronica (never the paper one: e-CF issuer)",
         )
 
         # Credit Note

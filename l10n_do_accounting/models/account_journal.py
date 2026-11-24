@@ -51,7 +51,13 @@ class AccountJournal(models.Model):
             # Return ncf/ecf types depending on company ECF issuing status
             return ecf_types if self.company_id.l10n_do_ecf_issuer else types_list
 
-        return types_list + ecf_types
+        res = types_list + ecf_types
+        if invoice.is_purchase_document():
+            # The company issues its gastos menores itself: paper or electronic
+            # by its own e-CF status, never both.
+            issuer = bool(self.company_id.l10n_do_ecf_issuer)
+            res = [t for t in res if t not in ("minor", "e-minor") or t.startswith("e-") == issuer]
+        return res
 
     @api.model
     def _get_l10n_do_ncf_types_data(self):
@@ -64,13 +70,18 @@ class AccountJournal(models.Model):
                 "governmental": ["governmental"],
                 "foreigner": ["export", "consumer"],
             },
+            # Gastos menores (B13/E43) go with any vendor: DGII ties them to the
+            # payment (made by the company's staff, NG 05-19 art. 8), not to who
+            # was paid, and companies often book them under their own name.
+            # Comprobante de compras (B11/E41) stays for non-registered vendors
+            # only (art. 7: not deductible if the vendor is a taxpayer).
             "received": {
-                "taxpayer": ["fiscal"],
+                "taxpayer": ["fiscal", "minor"],
                 "non_payer": ["informal", "minor"],
-                "nonprofit": ["special", "governmental"],
-                "special": ["fiscal", "special", "governmental"],
-                "governmental": ["fiscal", "special", "governmental"],
-                "foreigner": ["import", "exterior"],
+                "nonprofit": ["special", "governmental", "minor"],
+                "special": ["fiscal", "special", "governmental", "minor"],
+                "governmental": ["fiscal", "special", "governmental", "minor"],
+                "foreigner": ["import", "exterior", "minor"],
             },
         }
 
