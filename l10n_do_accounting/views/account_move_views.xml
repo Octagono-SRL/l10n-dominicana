@@ -96,12 +96,39 @@
         </field>
     </record>
 
-    <!-- Exclude debit notes from actual vendor/customer invoices actions -->
+    <!-- Exclude debit notes from actual vendor/customer invoices actions.
+         Since Odoo 19 the Invoices/Bills menus no longer use these two actions
+         (journal dashboard links still do): see the filters below. -->
     <record id="account.action_move_out_invoice_type" model="ir.actions.act_window">
         <field name="domain">[('move_type', '=', 'out_invoice'), ('debit_origin_id', '=', False)]</field>
     </record>
     <record id="account.action_move_in_invoice_type" model="ir.actions.act_window">
         <field name="domain">[('move_type', '=', 'in_invoice'), ('debit_origin_id', '=', False)]</field>
+    </record>
+
+    <!-- Odoo 19 menus open one list of invoices, credit notes and receipts with
+         the "Invoices" (or "Bills") filter preselected. A debit note is an invoice
+         with debit_origin_id, so it showed among the invoices: it now only shows
+         under the "Debit Notes" filter (account_debit_note) and its own menu. -->
+    <record id="view_account_invoice_filter_debit_notes_apart" model="ir.ui.view">
+        <field name="name">account.move.invoice.filter.l10n_do.debit.notes</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="account.view_account_invoice_filter"/>
+        <field name="arch" type="xml">
+            <filter name="out_invoice" position="attributes">
+                <attribute name="domain">[('move_type', '=', 'out_invoice'), ('debit_origin_id', '=', False)]</attribute>
+            </filter>
+        </field>
+    </record>
+    <record id="view_account_bill_filter_debit_notes_apart" model="ir.ui.view">
+        <field name="name">account.move.bill.filter.l10n_do.debit.notes</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="account.view_account_bill_filter"/>
+        <field name="arch" type="xml">
+            <filter name="in_invoice" position="attributes">
+                <attribute name="domain">[('move_type', '=', 'in_invoice'), ('debit_origin_id', '=', False)]</attribute>
+            </filter>
+        </field>
     </record>
 
     <!-- Out Debit Notes -->
@@ -115,7 +142,7 @@
                           (0, 0, {'view_mode': 'form', 'view_id': ref('account.view_move_form')})]"/>
         <field name="domain">[('move_type','=','out_invoice'), ('debit_origin_id', '!=', False)]</field>
         <field name="context">{
-            'default_type': 'out_invoice',
+            'default_move_type': 'out_invoice',
             'move_type': 'out_invoice',
             'journal_type': 'sale',
             'internal_type': 'debit_note',
@@ -145,9 +172,8 @@
         <field eval="False" name="view_id"/>
         <field name="domain">[('move_type','=','in_invoice'), ('debit_origin_id', '!=', False)]</field>
         <field name="context">{
-            'default_type': 'in_invoice',
+            'default_move_type': 'in_invoice',
             'move_type': 'in_invoice',
-            'journal_type': 'purchase',
             'journal_type': 'purchase',
             'internal_type': 'debit_note',
             }</field>
