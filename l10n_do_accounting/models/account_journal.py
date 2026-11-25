@@ -53,10 +53,11 @@ class AccountJournal(models.Model):
 
         res = types_list + ecf_types
         if invoice.is_purchase_document():
-            # The company issues its gastos menores itself: paper or electronic
-            # by its own e-CF status, never both.
+            # The company issues its compras and gastos menores itself: paper or
+            # electronic by its own e-CF status, never both.
             issuer = bool(self.company_id.l10n_do_ecf_issuer)
-            res = [t for t in res if t not in ("minor", "e-minor") or t.startswith("e-") == issuer]
+            own = ("informal", "e-informal", "minor", "e-minor")
+            res = [t for t in res if t not in own or t.startswith("e-") == issuer]
         return res
 
     @api.model
@@ -73,14 +74,17 @@ class AccountJournal(models.Model):
             # Gastos menores (B13/E43) go with any vendor: DGII ties them to the
             # payment (made by the company's staff, NG 05-19 art. 8), not to who
             # was paid, and companies often book them under their own name.
-            # Comprobante de compras (B11/E41) stays for non-registered vendors
-            # only (art. 7: not deductible if the vendor is a taxpayer).
+            # Comprobante de compras (B11/E41) is offered for any vendor with a
+            # Dominican RNC or cedula too: the accountant decides. DGII meant it
+            # for vendors not registered as taxpayers (art. 7): issued to a
+            # registered one, the expense is not deductible, and ITBIS is always
+            # withheld in full. Foreign vendors have no Dominican id to put on it.
             "received": {
-                "taxpayer": ["fiscal", "minor"],
+                "taxpayer": ["fiscal", "informal", "minor"],
                 "non_payer": ["informal", "minor"],
-                "nonprofit": ["special", "governmental", "minor"],
-                "special": ["fiscal", "special", "governmental", "minor"],
-                "governmental": ["fiscal", "special", "governmental", "minor"],
+                "nonprofit": ["special", "governmental", "informal", "minor"],
+                "special": ["fiscal", "special", "governmental", "informal", "minor"],
+                "governmental": ["fiscal", "special", "governmental", "informal", "minor"],
                 "foreigner": ["import", "exterior", "minor"],
             },
         }

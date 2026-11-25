@@ -171,11 +171,12 @@ class AccountMoveTest(common.L10nDOTestsCommon):
                 (
                     self.do_document_type["fiscal"]
                     + self.do_document_type["e-fiscal"]
+                    + self.do_document_type["informal"]
                     + self.do_document_type["minor"]
                 ).ids
             ),
             "Tax Payer bill must have Credito Fiscal and, issued by the company "
-            "itself, Gasto Menor (paper: company is not an e-CF issuer)",
+            "itself, Compras and Gasto Menor (paper: company is not an e-CF issuer)",
         )
 
         # Credit Note
@@ -422,11 +423,13 @@ class AccountMoveTest(common.L10nDOTestsCommon):
                 (
                     self.do_document_type["fiscal"]
                     + self.do_document_type["e-fiscal"]
+                    + self.do_document_type["e-informal"]
                     + self.do_document_type["e-minor"]
                 ).ids
             ),
             "Tax Payer bill must have Credito Fiscal and, issued by the company "
-            "itself, Gasto Menor Electronica (never the paper one: e-CF issuer)",
+            "itself, Compras and Gasto Menor Electronica (never the paper ones: "
+            "e-CF issuer)",
         )
 
         # Credit Note
