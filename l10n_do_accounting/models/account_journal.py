@@ -157,6 +157,11 @@ class AccountJournal(models.Model):
             or self.company_id.country_id != self.env.ref("base.do")
         ):
             return
+        if not self.company_id.vat:
+            # A new database has no company RNC yet: creating the journals
+            # (chart of accounts install) must not fail. The document types
+            # are added when the RNC is set (see res.partner.write).
+            return
 
         document_types = self.l10n_do_document_type_ids
         fiscal_types = self._get_journal_ncf_types()

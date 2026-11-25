@@ -94,8 +94,32 @@ class Partner(models.Model):
     def write(self, vals):
         res = super(Partner, self).write(vals)
         self._check_l10n_do_fiscal_fields(vals)
+        if vals.get("vat"):
+            self._l10n_do_create_company_document_types()
 
         return res
+
+    def _l10n_do_create_company_document_types(self):
+        """Journals created while the company had no RNC have no document
+        types; add them once the company's RNC is set."""
+        companies = (
+            self.env["res.company"].sudo().search([("partner_id", "in", self.ids)])
+        )
+        if not companies:
+            return
+        journals = (
+            self.env["account.journal"]
+            .sudo()
+            .search(
+                [
+                    ("company_id", "in", companies.ids),
+                    ("type", "in", ("sale", "purchase")),
+                    ("l10n_latam_use_documents", "=", True),
+                ]
+            )
+        )
+        for journal in journals:
+            journal._l10n_do_create_document_types()
 
     @api.depends("vat", "country_id", "name")
     def _compute_l10n_do_dgii_payer_type(self):
